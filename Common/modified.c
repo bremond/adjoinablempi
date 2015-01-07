@@ -146,8 +146,8 @@ int TLM_AMPI_Recv(void* buf,
                   AMPI_PairedWith pairedWith,
                   MPI_Comm comm,
                   MPI_Status* status) {
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Recv(buf,count,datatype,src,tag,comm,status);
   return rc;
 }
 
@@ -472,7 +472,7 @@ int TLM_AMPI_Send (void* buf,
                    AMPI_PairedWith pairedWith,
                    MPI_Comm comm) {
   int rc=0;
-  assert(0);
+  MPI_Send(buf,count,datatype,dest,tag,comm);
   return rc;
 }
 
@@ -808,7 +808,7 @@ int FW_AMPI_Barrier(MPI_Comm comm){
 }
 
 int BW_AMPI_Barrier(MPI_Comm comm){
-  int rc=0;
+  int rc;
   comm=(*ourADTOOL_AMPI_FPCollection.pop_comm_fp)();
   rc=MPI_Barrier(comm);
   return rc;
@@ -941,8 +941,8 @@ int TLM_AMPI_Gather(void *sendbuf,
                     MPI_Datatype recvtype,
                     int root,
                     MPI_Comm comm) {
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Gather(sendbuf,sendcnt,sendtype,recvbuf,recvcnt,recvtype,root,comm);
   return rc;
 }
 
@@ -1049,8 +1049,8 @@ int TLM_AMPI_Scatter(void *sendbuf,
                      MPI_Datatype recvtype,
                      int root,
                      MPI_Comm comm){
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Scatter(sendbuf,sendcnt,sendtype,recvbuf,recvcnt,recvtype,root,comm);
   return rc;
 }
 
@@ -1152,8 +1152,8 @@ int TLM_AMPI_Allgather(void *sendbuf,
                        int recvcount,
                        MPI_Datatype recvtype,
                        MPI_Comm comm) {
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Allgather(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm);
   return rc;
 }
 
@@ -1290,8 +1290,8 @@ int TLM_AMPI_Gatherv(void *sendbuf,
                      MPI_Datatype recvtype,
                      int root,
                      MPI_Comm comm) {
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Gatherv(sendbuf,sendcnt,sendtype,recvbuf,recvcnts,displs,recvtype,root,comm);
   return rc;
 }
 
@@ -1426,8 +1426,8 @@ int TLM_AMPI_Scatterv(void *sendbuf,
                       int recvcnt,
                       MPI_Datatype recvtype,
                       int root, MPI_Comm comm){
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Scatterv(sendbuf,sendcnts,displs,sendtype,recvbuf,recvcnt,recvtype,root,comm);
   return rc;
 }
 
@@ -1546,8 +1546,8 @@ int TLM_AMPI_Allgatherv(void *sendbuf,
                         int *displs,
                         MPI_Datatype recvtype,
                         MPI_Comm comm) {
-  int rc=0;
-  assert(0);
+  int rc;
+  rc = MPI_Allgatherv(sendbuf,sendcnt,sendtype,recvbuf,recvcnts,displs,recvtype,comm);
   return rc;
 }
 
@@ -1899,7 +1899,7 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
                 (*ourADTOOL_AMPI_FPCollection.adjointMax_fp)
                   (count, datatype, comm, obuf, obufb, rbuf, rbufb) ;
               } else {
-                printf(__FILE__ ": adjoint AMPI reduction not yet implemented for std op==%i\n",op) ;
+                printf(__FILE__ ": adjoint AMPI reduction not yet implemented for std op==%i\n",uop_idx) ;
               }
             }
           } else {

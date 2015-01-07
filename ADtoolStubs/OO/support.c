@@ -8,6 +8,7 @@
 */
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 #include "ampi/adTool/support.h"
 
 MPI_Comm ADTOOL_AMPI_COMM_WORLD_SHADOW;
