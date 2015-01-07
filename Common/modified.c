@@ -1636,8 +1636,11 @@ int TLM_AMPI_Bcast(void* buf,
   return rc;
 }
 
-/** Set split_mode to 1 to obtain split FW and BW adjoint reduce.
- * Set split_mode to 0 and pass non-NULL sbufb to obtain joint adjoint reduce. */
+/** Pass split_mode 0 to obtain a joint adjoint reduction-driver and a joint adjoint reduction-op
+ *  Pass split_mode 1 to obtain a split adjoint reduction-driver and a joint adjoint reduction-op
+ *  Pass split_mode 2 to obtain a split adjoint reduction-driver and a split adjoint reduction-op
+ *  When no adjoint is required (sbufb null), pass split_mode 0
+ */
 int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
                     void* rbuf, void* rbufd, void* rbufb,
                     int count,
@@ -1720,7 +1723,7 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
     int maskup = 0xffffffff ;
     int mask   = 0x1;
 
-    if (!(reduceAdj&&split_mode)) {
+    if (!reduceAdj || split_mode==0) {
      while (mask < comm_size) {
       if ((rank&mask) == 0) { /* Typical action is RECV */
         other = (rank==root?root&maskup:rank) | mask ;
@@ -1759,12 +1762,12 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
           rc = MPI_Recv(obufd, count, datatyped, other, 11, shadowcomm, &status);
           assert(rc==MPI_SUCCESS);
         }
-        if (reduceAdj || split_mode) {
-          /* Save obuf and rbuf for future use in the adjoint sweep */
-          (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,rbuf) ;
-          (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,obuf) ;
-        }
         if (is_commutative || (other<rank)) {
+          /* Save obuf and rbuf for future use in the adjoint sweep */
+          (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,obuf) ;
+          if (split_mode!=2) {
+            (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,rbuf) ;
+          }
           if (isUserDefinedOp(uop_idx)) {
             if (reduceTgt)
               (*uopd)(obuf, obufd, rbuf, rbufd, &count, &datatype, &datatyped);
@@ -1785,6 +1788,11 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
             }
           }
         } else {
+          /* Save obuf and rbuf for future use in the adjoint sweep */
+          (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,rbuf) ;
+          if (split_mode!=2) {
+            (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,obuf) ;
+          }
           if (reduceTgt)
             (*uopd)(rbuf, rbufd, obuf, obufd, &count, &datatype, &datatyped);
           else
@@ -1813,7 +1821,7 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
 
     }
 
-    if (split_mode) {
+    if (split_mode!=0) {
       if (!reduceAdj) {
         (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(1,MPI_INT,comm,&switched) ;
         (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(1,MPI_INT,comm,&maskup) ;
@@ -1873,8 +1881,10 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
         } else if (action==-1/* fw RECV*/) {
           if (is_commutative || (other<rank)) {
             /* Retrieve obuf and rbuf for the adjoint call */
+            if (split_mode!=2) {
+              (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(count,datatype,comm,rbuf) ;
+            }
             (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(count,datatype,comm,obuf) ;
-            (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(count,datatype,comm,rbuf) ;
             (*ourADTOOL_AMPI_FPCollection.nullifyAdjoint_fp)(count,datatypeb,comm,obufb);
             if (isUserDefinedOp(uop_idx)) {
               (*uopb)(obuf, obufb, rbuf, rbufb, &count, &datatype, &datatypeb) ;
@@ -1896,7 +1906,9 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
             exch_buf = obuf ; obuf = rbuf ; rbuf = exch_buf ;
             exch_buf = obufb ; obufb = rbufb ; rbufb = exch_buf ;
             /* Retrieve obuf and rbuf for the adjoint call */
-            (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(count,datatype,comm,obuf) ;
+            if (split_mode!=2) {
+              (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(count,datatype,comm,obuf) ;
+            }
             (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(count,datatype,comm,rbuf) ;
             (*uopb)(rbuf, rbufb, obuf, obufb, &count, &datatype, &datatypeb) ;
           }
