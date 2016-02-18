@@ -86,14 +86,16 @@ void ampi_irecv_(void* buf,
                  int *tag,
                  int *pairedWithF,
                  int *commF,
-                 int *request,
+                 MPI_Fint *requestF,
                  int *err_code){
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = AMPI_Irecv(buf, *count, datatype,
                          *source, *tag, pairedWith, commC,
-                         (MPI_Request*)request);
+                         &request);
+  *requestF = MPI_Request_c2f(request);
 }
 
 void ampi_isend_(void* buf,
@@ -103,18 +105,32 @@ void ampi_isend_(void* buf,
                  int *tag,
                  int *pairedWithF,
                  int *commF,
-                 int *request,
+                 MPI_Fint *requestF,
                  int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = AMPI_Isend(buf, *count, datatype,
                          *dest, *tag, pairedWith, commC,
-                         (MPI_Request*)request);
+                         &request);
+  *requestF = MPI_Request_c2f(request);
 }
 
-void ampi_wait_(int *request, int *status, int* err_code) {
-  *err_code = AMPI_Wait((MPI_Request*)request,
-                        (MPI_Status*)status);
+void ampi_wait_( MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
+  MPI_Request request;
+  request = MPI_Request_f2c( *requestF );
+  if( statusF == MPI_F_STATUS_IGNORE ) {
+    *err_code = AMPI_Wait( &request,  MPI_STATUS_IGNORE );
+  }
+  else if( statusF == MPI_F_STATUSES_IGNORE ) {
+    *err_code = AMPI_Wait( &request,  MPI_STATUSES_IGNORE );
+  }  
+  else {
+    MPI_Status status;
+    MPI_Status_f2c( statusF, &status );
+    *err_code = AMPI_Wait( &request,  &status );
+    MPI_Status_c2f( &status, statusF ) ;
+  }
 }
 

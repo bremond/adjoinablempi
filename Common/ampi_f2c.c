@@ -100,14 +100,15 @@ void fw_ampi_irecv_(void* buf,
                     int *tag,
                     int *pairedWithF,
                     int *commF,
-                    int *request,
+                    MPI_Fint *requestF,
                     int *err_code){
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = FW_AMPI_Irecv(buf, *count, datatype,
-                            *source, *tag, pairedWith, commC,
-                            (MPI_Request*)request);
+                            *source, *tag, pairedWith, commC, &request);
+  *requestF = MPI_Request_c2f(request);
 }
 
 void bw_ampi_irecv_(void* buf,
@@ -117,14 +118,14 @@ void bw_ampi_irecv_(void* buf,
                     int *tag,
                     int *pairedWithF,
                     int *commF,
-                    int *request,
+                    MPI_Fint *requestF,
                     int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = BW_AMPI_Irecv(buf, *count, datatype,
-                            *source, *tag, pairedWith, commC,
-                            (MPI_Request*)request);
+                            *source, *tag, pairedWith, commC, &request);
 }
 
 void tls_ampi_irecv_(void* buf, void* shadowbuf,
@@ -134,15 +135,16 @@ void tls_ampi_irecv_(void* buf, void* shadowbuf,
                      int *tag,
                      int *pairedWithF,
                      int *commF,
-                     int *request,
+                     MPI_Fint *requestF,
                      int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   MPI_Datatype shadowdatatype = MPI_Type_f2c(*shadowdatatypeF) ;
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = TLS_AMPI_Irecv(buf, shadowbuf, *count, datatype, shadowdatatype,
-                            *source, *tag, pairedWith, commC,
-                            (MPI_Request*)request);
+                            *source, *tag, pairedWith, commC, &request);
+  *requestF = MPI_Request_c2f(request);
 }
 
 void fw_ampi_send_(void* buf, 
@@ -198,14 +200,15 @@ void fw_ampi_isend_(void* buf,
                     int *tag,
                     int *pairedWithF,
                     int *commF,
-                    int *request,
+                    MPI_Fint *requestF,
                     int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = FW_AMPI_Isend(buf, *count, datatype,
-                            *dest, *tag, pairedWith, commC,
-                            (MPI_Request*)request);
+                            *dest, *tag, pairedWith, commC, &request);
+  *requestF = MPI_Request_c2f(request);
 }
 
 void bw_ampi_isend_(void* buf,
@@ -215,14 +218,14 @@ void bw_ampi_isend_(void* buf,
                     int *tag,
                     int *pairedWithF,
                     int *commF,
-                    int *request,
+                    MPI_Fint *requestF,
                     int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = BW_AMPI_Isend(buf, *count, datatype,
-                            *dest, *tag, pairedWith, commC,
-                            (MPI_Request*)request);
+                            *dest, *tag, pairedWith, commC, &request);
 }
 
 void tls_ampi_isend_(void* buf, void* shadowbuf,
@@ -232,30 +235,54 @@ void tls_ampi_isend_(void* buf, void* shadowbuf,
                      int *tag,
                      int *pairedWithF,
                      int *commF,
-                     int *request,
+                     MPI_Fint *requestF,
                      int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Request request   = MPI_Request_f2c(*requestF);
   MPI_Datatype shadowdatatype = MPI_Type_f2c(*shadowdatatypeF) ;
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = TLS_AMPI_Isend(buf, shadowbuf, *count, datatype, shadowdatatype,
-                            *dest, *tag, pairedWith, commC,
-                            (MPI_Request*)request);
+                            *dest, *tag, pairedWith, commC, &request);
+  *requestF = MPI_Request_c2f(request);
 }
 
-void fw_ampi_wait_(int *request, int *status, int* err_code) {
-  *err_code = FW_AMPI_Wait((MPI_Request*)request,
-                           (MPI_Status*)status);
+void fw_ampi_wait_(MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
+  MPI_Request request = MPI_Request_f2c( *requestF );
+  if( statusF == MPI_F_STATUS_IGNORE ) {
+    *err_code = FW_AMPI_Wait( &request,  MPI_STATUS_IGNORE );
+  }
+  else if( statusF == MPI_F_STATUSES_IGNORE ) {
+    *err_code = FW_AMPI_Wait( &request,  MPI_STATUSES_IGNORE );
+  }
+  else {
+    MPI_Status status;
+    MPI_Status_f2c( statusF, &status );
+    *err_code = FW_AMPI_Wait( &request,  &status );
+    MPI_Status_c2f( &status, statusF ) ;
+  }
 }
 
-void bw_ampi_wait_(int *request, int *status, int* err_code) {
-  *err_code = BW_AMPI_Wait((MPI_Request*)request,
-                           (MPI_Status*)status);
+void bw_ampi_wait_(MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
+  MPI_Request request = MPI_Request_f2c( *requestF );
+  *err_code = BW_AMPI_Wait( &request,  MPI_STATUS_IGNORE );
+  *requestF = MPI_Request_c2f(request);
 }
 
-void tls_ampi_wait_(int *request, int *status, int* err_code) {
-  *err_code = TLS_AMPI_Wait((MPI_Request*)request,
-                            (MPI_Status*)status);
+void tls_ampi_wait_(MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
+  MPI_Request request = MPI_Request_f2c( *requestF );
+  if( statusF == MPI_F_STATUS_IGNORE ) {
+    *err_code = TLS_AMPI_Wait( &request,  MPI_STATUS_IGNORE );
+  }
+  else if( statusF == MPI_F_STATUSES_IGNORE ) {
+    *err_code = TLS_AMPI_Wait( &request,  MPI_STATUSES_IGNORE );
+  }
+  else {
+    MPI_Status status;
+    MPI_Status_f2c( statusF, &status );
+    *err_code = TLS_AMPI_Wait( &request,  &status );
+    MPI_Status_c2f( &status, statusF ) ;
+  }
 }
 
 void fw_ampi_barrier_(int *commF, int* err_code) {
