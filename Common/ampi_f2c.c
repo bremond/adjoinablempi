@@ -251,11 +251,9 @@ void fw_ampi_wait_(MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
   MPI_Request request = MPI_Request_f2c( *requestF );
   if( statusF == MPI_F_STATUS_IGNORE ) {
     *err_code = FW_AMPI_Wait( &request,  MPI_STATUS_IGNORE );
-  }
-  else if( statusF == MPI_F_STATUSES_IGNORE ) {
+  } else if( statusF == MPI_F_STATUSES_IGNORE ) {
     *err_code = FW_AMPI_Wait( &request,  MPI_STATUSES_IGNORE );
-  }
-  else {
+  } else {
     MPI_Status status;
     MPI_Status_f2c( statusF, &status );
     *err_code = FW_AMPI_Wait( &request,  &status );
