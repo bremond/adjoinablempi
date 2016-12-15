@@ -1636,25 +1636,30 @@ int TLM_AMPI_Bcast(void* buf,
   return rc;
 }
 
-/** Pass split_mode 0 to obtain a joint adjoint reduction-driver and a joint adjoint reduction-op
- *  Pass split_mode 1 to obtain a split adjoint reduction-driver and a joint adjoint reduction-op
- *  Pass split_mode 2 to obtain a split adjoint reduction-driver and a split adjoint reduction-op
- *  When no adjoint is required (sbufb null), pass split_mode 0
+/** Common implementation for tangent and adjoint of reductions (Reduce and Allreduce).
+ *  Manages arbitrary reduction operation, with optimized implementation for MPI_SUM.
+ *  Used so far only for the shadowed case (i.e. Association-by-Name, i.e. Tapenade)
+ *  but could also be used for Association-by-Address in principle.
+ *  When no adjoint is required (sbufb null), pass split_mode 0, otherwise:
+ *   -pass split_mode 0 to obtain a joint adjoint reduction-driver and a joint adjoint reduction-op.
+ *   -pass split_mode 1 to obtain a split adjoint reduction-driver and a joint adjoint reduction-op.
+ *   -pass split_mode 2 to obtain a split adjoint reduction-driver and a split adjoint reduction-op.
+ *  Pass all_mode 1 to perform an "Allreduce" ; in that case we suggest that caller passes root=0.
  */
 int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
                     void* rbuf, void* rbufd, void* rbufb,
                     int count,
                     MPI_Datatype datatype, MPI_Datatype datatyped, MPI_Datatype datatypeb,
                     MPI_Op op, TLM_userFunctionF* uopd, ADJ_userFunctionF* uopb,
-                    int split_mode,
+                    int split_mode, int all_mode,
                     int root,
                     MPI_Comm comm) {
   if (count == 0) return MPI_SUCCESS;
   int rc, rank ;
   MPI_Comm_rank(comm,&rank) ;
   void *idx=NULL; /* only for compatibility in incrementAdjoint_fp(..., idx) */
-  int reduceTgt = (sbufd!=NULL) ;
-  int reduceAdj = (sbufb!=NULL) ;
+  int reduceTgt = (rbufd!=NULL) ;
+  int reduceAdj = (rbufb!=NULL) ;
   MPI_Comm shadowcomm = comm ;
   if (reduceTgt)
     shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
@@ -1687,6 +1692,12 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
       obufd =
         (*ourADTOOL_AMPI_FPCollection.allocateTempActiveBuf_fp)(count,datatyped,shadowcomm);
       obufd = (void*)((char*)obufd - lbd);
+    }
+
+    void *orig_rbuf=NULL, *orig_rbufd=NULL ;
+    if (all_mode) {
+      orig_rbuf = rbuf ;
+      if (reduceTgt) {orig_rbufd = rbufd ;}
     }
 
     if (sbuf==MPI_IN_PLACE) {
@@ -1821,6 +1832,18 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
 
     }
 
+    if (all_mode) {
+      if (!reduceAdj) { /* Adjoint joint mode does not need to return a correct rbuf */
+        /* ?? (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(count,datatype,comm,orig_rbuf) ; */
+        rc=MPI_Bcast(orig_rbuf, count, datatype, root, comm) ;
+        assert(rc==MPI_SUCCESS) ;
+      }
+      if (reduceTgt) {
+        rc=MPI_Bcast(orig_rbufd, count, datatyped, root, comm) ;
+        assert(rc==MPI_SUCCESS) ;
+      }
+    }
+
     if (split_mode!=0) {
       if (!reduceAdj) {
         (*ourADTOOL_AMPI_FPCollection.pushBuffer_fp)(1,MPI_INT,comm,&switched) ;
@@ -1830,6 +1853,18 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
         (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(1,MPI_INT,comm,&mask) ;
         (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(1,MPI_INT,comm,&maskup) ;
         (*ourADTOOL_AMPI_FPCollection.popBuffer_fp)(1,MPI_INT,comm,&switched) ;
+      }
+    }
+
+    if (all_mode) {
+      if (reduceAdj) {
+        if (rank != root)
+          rc=MPI_Reduce(rbufb, rbufb, count, datatypeb, MPI_SUM, root, comm) ;
+        else
+          rc=MPI_Reduce(MPI_IN_PLACE, rbufb, count, datatypeb, MPI_SUM, root, comm) ;
+        assert(rc==MPI_SUCCESS) ;
+        if (rank != root)
+          (*ourADTOOL_AMPI_FPCollection.nullifyAdjoint_fp)(count,datatypeb,comm,rbufb);
       }
     }
 
@@ -1935,10 +1970,20 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
       (*ourADTOOL_AMPI_FPCollection.releaseTempActiveBuf_fp)(rbuf,count,datatype);
       if (reduceTgt) (*ourADTOOL_AMPI_FPCollection.releaseTempActiveBuf_fp)(rbufd,count,datatyped);
     }
-    return MPI_SUCCESS;
+    rc = MPI_SUCCESS;
+
   } else {  /* i.e. op==MPI_SUM and no user-given derivative */
+
     if (!reduceAdj) {
-      rc=MPI_Reduce(sbuf,
+      if (all_mode)
+        rc=MPI_Allreduce(sbuf,
+                    rbuf,
+                    count,
+                    datatype,
+                    op,
+                    comm);
+      else
+        rc=MPI_Reduce(sbuf,
                     rbuf,
                     count,
                     datatype,
@@ -1947,34 +1992,66 @@ int PEDESTRIAN_AMPI_Reduce(void* sbuf, void* sbufd, void* sbufb,
                     comm);
       assert(rc==MPI_SUCCESS);
     }
-    if (reduceTgt)
-      rc=MPI_Reduce(sbufd,
+    if (reduceTgt) {
+      if (all_mode)
+        rc=MPI_Allreduce(sbufd,
+                    rbufd,
+                    count,
+                    datatyped,
+                    op,
+                    shadowcomm);
+      else
+        rc=MPI_Reduce(sbufd,
                     rbufd,
                     count,
                     datatyped,
                     op,
                     root,
                     shadowcomm);
+      assert(rc==MPI_SUCCESS);
+    }
     if (reduceAdj) {
-      int dt_idxb = derivedTypeIdx(datatypeb);
-      MPI_Aint lbb = (isDerivedType(dt_idxb)?getDTypeData()->lbs[dt_idxb]:0) ;
-      void *tmp_bufb =
-        (*ourADTOOL_AMPI_FPCollection.allocateTempActiveBuf_fp)(count,datatypeb,comm);
-      tmp_bufb = (void*)((char*)tmp_bufb - lbb);
-      if (rank==root)
-        (*ourADTOOL_AMPI_FPCollection.copyActiveBuf_fp)(rbufb,tmp_bufb,
-                                                        count, datatypeb, comm);
-      rc=MPI_Bcast(tmp_bufb, count, datatypeb, root, comm) ;
-      assert(rc==MPI_SUCCESS) ;
-      (*ourADTOOL_AMPI_FPCollection.incrementAdjoint_fp)(count,datatypeb,comm,sbufb,tmp_bufb, idx) ;
-      (*ourADTOOL_AMPI_FPCollection.releaseTempActiveBuf_fp)(tmp_bufb,count,datatypeb);
+      if (all_mode) {
+        rc=MPI_Allreduce(MPI_IN_PLACE,
+                         rbufb,
+                         count,
+                         datatypeb,
+                         op,
+                         shadowcomm);
+        assert(rc==MPI_SUCCESS) ;
+        if (sbuf!=MPI_IN_PLACE) {
+          (*ourADTOOL_AMPI_FPCollection.incrementAdjoint_fp)(count,datatypeb,comm,sbufb,rbufb, idx) ;
+          (*ourADTOOL_AMPI_FPCollection.nullifyAdjoint_fp)(count,datatypeb,comm,rbufb);
+        }
+      } else {
+        int dt_idxb = derivedTypeIdx(datatypeb);
+        MPI_Aint lbb = (isDerivedType(dt_idxb)?getDTypeData()->lbs[dt_idxb]:0) ;
+        void *tmp_bufb =
+          (*ourADTOOL_AMPI_FPCollection.allocateTempActiveBuf_fp)(count,datatypeb,comm);
+        tmp_bufb = (void*)((char*)tmp_bufb - lbb);
+        if (rank==root) {
+          (*ourADTOOL_AMPI_FPCollection.copyActiveBuf_fp)(rbufb,tmp_bufb,
+                                                          count, datatypeb, comm);
+        }
+        rc=MPI_Bcast(tmp_bufb, count, datatypeb, root, comm) ;
+        assert(rc==MPI_SUCCESS) ;
+        if (sbuf==MPI_IN_PLACE) {
+          if (rank != root)
+            (*ourADTOOL_AMPI_FPCollection.incrementAdjoint_fp)(count,datatypeb,comm,rbufb,tmp_bufb, idx) ;
+        } else {
+          if (rank == root)
+            (*ourADTOOL_AMPI_FPCollection.nullifyAdjoint_fp)(count,datatypeb,comm,rbufb);
+          (*ourADTOOL_AMPI_FPCollection.incrementAdjoint_fp)(count,datatypeb,comm,sbufb,tmp_bufb, idx) ;
+        }
+        (*ourADTOOL_AMPI_FPCollection.releaseTempActiveBuf_fp)(tmp_bufb,count,datatypeb);
+      }
       rc = MPI_SUCCESS ;
     }
-    return rc;
   }
+  return rc;
 }
 
-int FWB_AMPI_Reduce (void* sbuf,
+int FWB_AMPI_Reduce(void* sbuf,
 		    void* rbuf,
 		    int count,
 		    MPI_Datatype datatype,
@@ -2087,7 +2164,8 @@ int FWB_AMPI_Reduce (void* sbuf,
   }
 }
 
-/** [llh 16/10/2013] This version for Association-By-Name : */
+/** Adjoint diff of \ref AMPI_Reduce, forward sweep.
+ [llh 16/10/2013] This version for shadowed (i.e. Association-by-Name) : */
 int FWS_AMPI_Reduce(void* sbuf,
                    void* rbuf,
                    int count,
@@ -2100,7 +2178,7 @@ int FWS_AMPI_Reduce(void* sbuf,
                          count,
                          datatype, datatype, datatype, 
                          op, NULL, NULL,
-                         1,
+                         1, 0,
                          root,
                          comm) ;
 }
@@ -2182,7 +2260,8 @@ int BWB_AMPI_Reduce (void* sbuf,
   return rc;
 }
 
-/** [llh 16/10/2013] This version for Association-By-Name : */
+/** Adjoint diff of \ref AMPI_Reduce, backward sweep.
+ [llh 16/10/2013] This version for shadowed (i.e. Association-by-Name) : */
 int BWS_AMPI_Reduce(void* sbuf, void* sbufb,
 		   void* rbuf, void* rbufb,
 		   int count,
@@ -2195,7 +2274,7 @@ int BWS_AMPI_Reduce(void* sbuf, void* sbufb,
                          count,
                          datatype, datatype, datatypeb,
                          op, NULL, uopb,
-                         1,
+                         1, 0,
                          root,
                          comm) ;
 }
@@ -2217,8 +2296,8 @@ int TLB_AMPI_Reduce(void* sbuf,
   return rc;
 }
 
-/**
- * Tangent diff of \ref AMPI_Reduce. Shadowed (Association-by-Name)
+/** Tangent diff of \ref AMPI_Reduce.
+ This version for shadowed (i.e. Association-by-Name) :
  */
 int TLS_AMPI_Reduce(void* sbuf, void* sbufd,
                     void* rbuf, void* rbufd,
@@ -2232,12 +2311,12 @@ int TLS_AMPI_Reduce(void* sbuf, void* sbufd,
                          count,
                          datatype, datatyped, datatype,
                          op, uopd, NULL,
-                         0,
+                         0, 0,
                          root,
                          comm) ;
 }
 
-int FW_AMPI_Allreduce (void* sbuf,
+int FWB_AMPI_Allreduce (void* sbuf,
                        void* rbuf,
                        int count,
                        MPI_Datatype datatype,
@@ -2276,7 +2355,26 @@ int FW_AMPI_Allreduce (void* sbuf,
   return rc;
 }
 
-int BW_AMPI_Allreduce (void* sbuf,
+/**
+ * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ */
+int FWS_AMPI_Allreduce (void* sbuf,
+                       void* rbuf,
+                       int count,
+                       MPI_Datatype datatype,
+                       MPI_Op op,
+                       MPI_Comm comm) {
+  return PEDESTRIAN_AMPI_Reduce(sbuf, NULL, NULL,
+                         rbuf, NULL, NULL,
+                         count,
+                         datatype, datatype, datatype, 
+                         op, NULL, NULL,
+                         1, 1,
+                         0,
+                         comm) ;
+}
+
+int BWB_AMPI_Allreduce (void* sbuf,
                        void* rbuf,
                        int count,
                        MPI_Datatype datatype,
@@ -2347,7 +2445,26 @@ int BW_AMPI_Allreduce (void* sbuf,
   return rc;
 }
 
-int TLM_AMPI_Allreduce(void* sbuf,
+/**
+ * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ */
+int BWS_AMPI_Allreduce (void* sbuf, void* sbufb,
+                       void* rbuf, void* rbufb,
+                       int count,
+                       MPI_Datatype datatype, MPI_Datatype datatypeb,
+                       MPI_Op op, TLM_userFunctionF* uopb,
+                       MPI_Comm comm) {
+  return PEDESTRIAN_AMPI_Reduce(sbuf, NULL, sbufb,
+                         rbuf, NULL, rbufb,
+                         count,
+                         datatype, datatype, datatypeb,
+                         op, NULL, uopb,
+                         1, 1,
+                         0,
+                         comm) ;
+}
+
+int TLB_AMPI_Allreduce(void* sbuf,
                        void* rbuf,
                        int count,
                        MPI_Datatype datatype,
@@ -2356,6 +2473,25 @@ int TLM_AMPI_Allreduce(void* sbuf,
   int rc=0;
   assert(0);
   return rc;
+}
+
+/**
+ * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ */
+int TLS_AMPI_Allreduce(void* sbuf, void* sbufd,
+                       void* rbuf, void* rbufd,
+                       int count,
+                       MPI_Datatype datatype, MPI_Datatype datatyped,
+                       MPI_Op op, TLM_userFunctionF* uopd,
+                       MPI_Comm comm) {
+  return PEDESTRIAN_AMPI_Reduce(sbuf, sbufd, NULL,
+                         rbuf, rbufd, NULL,
+                         count,
+                         datatype, datatyped, datatype,
+                         op, uopd, NULL,
+                         0, 1,
+                         0,
+                         comm) ;
 }
 
 derivedTypeData* getDTypeData() {

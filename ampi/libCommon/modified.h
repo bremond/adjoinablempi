@@ -575,7 +575,7 @@ int TLS_AMPI_Reduce(void* sbuf, void* sbufd,
 /**
  * forward sweep variant of \ref AMPI_Allreduce
  */
-int FW_AMPI_Allreduce(void* sbuf,
+int FWB_AMPI_Allreduce(void* sbuf,
                       void* rbuf,
                       int count,
                       MPI_Datatype datatype,
@@ -583,24 +583,54 @@ int FW_AMPI_Allreduce(void* sbuf,
                       MPI_Comm comm);
 
 /**
- * backward sweep variant of \ref AMPI_Allreduce
+ * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
  */
-int BW_AMPI_Allreduce(void* sbuf,
-                      void* rbuf,
-                      int count,
-                      MPI_Datatype datatype,
-                      MPI_Op op,
-                      MPI_Comm comm);
-
-/**
- * TLM variant of \ref AMPI_Allreduce
- */
-int TLM_AMPI_Allreduce(void* sbuf,
+int FWS_AMPI_Allreduce(void* sbuf,
                        void* rbuf,
                        int count,
                        MPI_Datatype datatype,
                        MPI_Op op,
                        MPI_Comm comm);
+
+/**
+ * backward sweep variant of \ref AMPI_Allreduce
+ */
+int BWB_AMPI_Allreduce(void* sbuf,
+                      void* rbuf,
+                      int count,
+                      MPI_Datatype datatype,
+                      MPI_Op op,
+                      MPI_Comm comm);
+
+/**
+ * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ */
+int BWS_AMPI_Allreduce(void* sbuf, void* sbufb,
+                       void* rbuf, void* rbufb,
+                       int count,
+                       MPI_Datatype datatype, MPI_Datatype datatypeb,
+                       MPI_Op op, TLM_userFunctionF* uopb,
+                       MPI_Comm comm);
+
+/**
+ * TLM variant of \ref AMPI_Allreduce
+ */
+int TLB_AMPI_Allreduce(void* sbuf,
+                       void* rbuf,
+                       int count,
+                       MPI_Datatype datatype,
+                       MPI_Op op,
+                       MPI_Comm comm);
+
+/**
+ * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ */
+int TLS_AMPI_Allreduce(void* sbuf, void* sbufd,
+                       void* rbuf, void* rbufd,
+                       int count,
+                       MPI_Datatype datatype, MPI_Datatype datatyped,
+                       MPI_Op op, TLM_userFunctionF* uopd,
+                       MPI_Comm comm) ;
 
 /**
  * create struct, calls MPI_Type_create_struct twice (second time for packed typemap) and stores info
