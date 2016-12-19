@@ -946,6 +946,21 @@ int TLM_AMPI_Gather(void *sendbuf,
   return rc;
 }
 
+int TLS_AMPI_Gather(void *sendbuf, void *shadowsendbuf,
+                    int sendcnt,
+                    MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                    void *recvbuf, void *shadowrecvbuf,
+                    int recvcnt,
+                    MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                    int root,
+                    MPI_Comm comm) {
+  int rc = MPI_Gather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Gather(shadowsendbuf, sendcnt, shadowsendtype, shadowrecvbuf, recvcnt, shadowrecvtype, root, shadowcomm) ;
+  return rc;
+}
+
 int FW_AMPI_Scatter(void *sendbuf,
                      int sendcnt,
                      MPI_Datatype sendtype,
@@ -1054,6 +1069,21 @@ int TLM_AMPI_Scatter(void *sendbuf,
   return rc;
 }
 
+int TLS_AMPI_Scatter(void *sendbuf, void *shadowsendbuf,
+                     int sendcnt,
+                     MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                     void *recvbuf, void *shadowrecvbuf,
+                     int recvcnt,
+                     MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                     int root,
+                     MPI_Comm comm){
+  int rc = MPI_Scatter(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Scatter(shadowsendbuf, sendcnt, shadowsendtype, shadowrecvbuf, recvcnt, shadowrecvtype, root, shadowcomm) ;
+  return rc;
+}
+
 int FW_AMPI_Allgather(void *sendbuf,
                       int sendcount,
                       MPI_Datatype sendtype,
@@ -1154,6 +1184,20 @@ int TLM_AMPI_Allgather(void *sendbuf,
                        MPI_Comm comm) {
   int rc;
   rc = MPI_Allgather(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm);
+  return rc;
+}
+
+int TLS_AMPI_Allgather(void *sendbuf, void *shadowsendbuf,
+                       int sendcount,
+                       MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                       void *recvbuf, void *shadowrecvbuf,
+                       int recvcount,
+                       MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                       MPI_Comm comm) {
+  int rc = MPI_Allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Allgather(shadowsendbuf, sendcount, shadowsendtype, shadowrecvbuf, recvcount, shadowrecvtype, shadowcomm) ;
   return rc;
 }
 
@@ -1295,6 +1339,22 @@ int TLM_AMPI_Gatherv(void *sendbuf,
   return rc;
 }
 
+int TLS_AMPI_Gatherv(void *sendbuf, void *shadowsendbuf,
+                     int sendcnt,
+                     MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                     void *recvbuf, void *shadowrecvbuf,
+                     int *recvcnts,
+                     int *displs, int *shadowdispls,
+                     MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                     int root,
+                     MPI_Comm comm) {
+  int rc = MPI_Gatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, root, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Gatherv(shadowsendbuf, sendcnt, shadowsendtype, shadowrecvbuf, recvcnts, shadowdispls, shadowrecvtype, root, shadowcomm) ;
+  return rc;
+}
+
 int FW_AMPI_Scatterv(void *sendbuf,
                      int *sendcnts,
                      int *displs,
@@ -1431,6 +1491,21 @@ int TLM_AMPI_Scatterv(void *sendbuf,
   return rc;
 }
 
+int TLS_AMPI_Scatterv(void *sendbuf, void *shadowsendbuf,
+                      int *sendcnts,
+                      int *displs, int *shadowdispls,
+                      MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                      void *recvbuf, void *shadowrecvbuf,
+                      int recvcnt,
+                      MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                      int root, MPI_Comm comm){
+  int rc = MPI_Scatterv(sendbuf, sendcnts, displs, sendtype, recvbuf, recvcnt, recvtype, root, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Scatterv(shadowsendbuf, sendcnts, shadowdispls, shadowsendtype, shadowrecvbuf, recvcnt, shadowrecvtype, root, shadowcomm) ;
+  return rc;
+}
+
 int FW_AMPI_Allgatherv(void *sendbuf,
                        int sendcnt,
                        MPI_Datatype sendtype,
@@ -1551,6 +1626,21 @@ int TLM_AMPI_Allgatherv(void *sendbuf,
   return rc;
 }
 
+int TLS_AMPI_Allgatherv(void *sendbuf, void *shadowsendbuf,
+                        int sendcnt,
+                        MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                        void *recvbuf, void *shadowrecvbuf,
+                        int *recvcnts,
+                        int *displs, int *shadowdispls,
+                        MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                        MPI_Comm comm) {
+  int rc = MPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Allgatherv(shadowsendbuf, sendcnt, shadowsendtype, shadowrecvbuf, recvcnts, shadowdispls, shadowrecvtype, shadowcomm) ;
+  return rc;
+}
+
 int FW_AMPI_Bcast (void* buf,
                    int count,
                    MPI_Datatype datatype,
@@ -1633,6 +1723,18 @@ int TLM_AMPI_Bcast(void* buf,
                    datatype,
                    root,
                    comm);
+  return rc;
+}
+
+int TLS_AMPI_Bcast(void* buf, void* shadowbuf,
+                   int count,
+                   MPI_Datatype datatype, MPI_Datatype shadowdatatype,
+                   int root,
+                   MPI_Comm comm){
+  int rc = MPI_Bcast(buf, count, datatype, root, comm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+  rc = MPI_Bcast(shadowbuf, count, shadowdatatype, root, shadowcomm) ;
   return rc;
 }
 
@@ -2164,9 +2266,8 @@ int FWB_AMPI_Reduce(void* sbuf,
   }
 }
 
-/** Adjoint diff of \ref AMPI_Reduce, forward sweep.
- [llh 16/10/2013] This version for shadowed (i.e. Association-by-Name) : */
-int FWS_AMPI_Reduce(void* sbuf,
+/** Adjoint diff of \ref AMPI_Reduce, forward sweep. */
+int FW_AMPI_Reduce(void* sbuf,
                    void* rbuf,
                    int count,
                    MPI_Datatype datatype,
@@ -2356,9 +2457,9 @@ int FWB_AMPI_Allreduce (void* sbuf,
 }
 
 /**
- * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ * Adjoint forward sweep of \ref AMPI_Allreduce
  */
-int FWS_AMPI_Allreduce (void* sbuf,
+int FW_AMPI_Allreduce (void* sbuf,
                        void* rbuf,
                        int count,
                        MPI_Datatype datatype,

@@ -42,6 +42,11 @@ void ampi_finalize_nt_(int* err_code) {
   *err_code = AMPI_Finalize_NT();
 }
 
+void ampi_comm_size_(MPI_Fint *commF, int *size, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = MPI_Comm_size(commC, size);
+}
+
 void ampi_comm_rank_(MPI_Fint *commF, int *rank, int* err_code) {
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = MPI_Comm_rank(commC, rank);
@@ -134,3 +139,64 @@ void ampi_wait_( MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
   }
 }
 
+void ampi_bcast_(void *buf, int *count, MPI_Fint *datatypeF, int *root, int *commF, int *err_code) {
+  MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Bcast(buf, *count, datatype, *root, commC) ;
+}
+
+void ampi_reduce_(void *sbuf, void *rbuf, int *count, MPI_Fint *datatypeF, MPI_Fint *opF, int *root, int *commF, int *err_code) {
+  MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Op op = MPI_Op_f2c(*opF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Reduce(sbuf, rbuf, *count, datatype, op, *root, commC) ;
+}
+
+void ampi_allreduce_(void *sbuf, void *rbuf, int *count, MPI_Fint *datatypeF, MPI_Fint *opF, int *commF, int *err_code) {
+  MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Op op = MPI_Op_f2c(*opF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Allreduce(sbuf, rbuf, *count, datatype, op, commC) ;
+}
+
+void ampi_scatter_(void *sbuf, int *scount, MPI_Fint *sdatatypeF, void *rbuf, int *rcount, MPI_Fint *rdatatypeF, int *root, int *commF, int *err_code) {
+  MPI_Datatype sdatatype = MPI_Type_f2c(*sdatatypeF) ;
+  MPI_Datatype rdatatype = MPI_Type_f2c(*rdatatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Scatter(sbuf, *scount, sdatatype, rbuf, *rcount, rdatatype, *root, commC) ;
+}
+
+void ampi_gather_(void *sbuf, int *scount, MPI_Fint *sdatatypeF, void *rbuf, int *rcount, MPI_Fint *rdatatypeF, int *root, int *commF, int *err_code) {
+  MPI_Datatype sdatatype = MPI_Type_f2c(*sdatatypeF) ;
+  MPI_Datatype rdatatype = MPI_Type_f2c(*rdatatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Gather(sbuf, *scount, sdatatype, rbuf, *rcount, rdatatype, *root, commC) ;
+}
+
+void ampi_allgather_(void *sbuf, int *scount, MPI_Fint *sdatatypeF, void *rbuf, int *rcount, MPI_Fint *rdatatypeF, int *commF, int *err_code) {
+  MPI_Datatype sdatatype = MPI_Type_f2c(*sdatatypeF) ;
+  MPI_Datatype rdatatype = MPI_Type_f2c(*rdatatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Allgather(sbuf, *scount, sdatatype, rbuf, *rcount, rdatatype, commC) ;
+}
+
+void ampi_scatterv_(void *sbuf, int *scount, int *displs, MPI_Fint *sdatatypeF, void *rbuf, int *rcount, MPI_Fint *rdatatypeF, int *root, int *commF, int *err_code) {
+  MPI_Datatype sdatatype = MPI_Type_f2c(*sdatatypeF) ;
+  MPI_Datatype rdatatype = MPI_Type_f2c(*rdatatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Scatterv(sbuf, scount, displs, sdatatype, rbuf, *rcount, rdatatype, *root, commC) ;
+}
+
+void ampi_gatherv_(void *sbuf, int *scount, MPI_Fint *sdatatypeF, void *rbuf, int *rcount, int *displs, MPI_Fint *rdatatypeF, int *root, int *commF, int *err_code) {
+  MPI_Datatype sdatatype = MPI_Type_f2c(*sdatatypeF) ;
+  MPI_Datatype rdatatype = MPI_Type_f2c(*rdatatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Gatherv(sbuf, *scount, sdatatype, rbuf, rcount, displs, rdatatype, *root, commC) ;
+}
+
+void ampi_allgatherv_(void *sbuf, int *scount, MPI_Fint *sdatatypeF, void *rbuf, int *rcount, int *displs, MPI_Fint *rdatatypeF, int *commF, int *err_code) {
+  MPI_Datatype sdatatype = MPI_Type_f2c(*sdatatypeF) ;
+  MPI_Datatype rdatatype = MPI_Type_f2c(*rdatatypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = AMPI_Allgatherv(sbuf, *scount, sdatatype, rbuf, rcount, displs, rdatatype, commC) ;
+}

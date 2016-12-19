@@ -282,7 +282,7 @@ int BW_AMPI_Gather(void *sendbuf,
                    MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Gather
+ * TLM variant of \ref AMPI_Gather. Bundled (Association-by-Address).
  */
 int TLM_AMPI_Gather(void *sendbuf,
                     int sendcnt,
@@ -290,6 +290,18 @@ int TLM_AMPI_Gather(void *sendbuf,
                     void *recvbuf,
                     int recvcnt,
                     MPI_Datatype recvtype,
+                    int root,
+                    MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Gather. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Gather(void *sendbuf, void *shadowsendbuf,
+                    int sendcnt,
+                    MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                    void *recvbuf, void *shadowrecvbuf,
+                    int recvcnt,
+                    MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
                     int root,
                     MPI_Comm comm);
 
@@ -318,7 +330,7 @@ int BW_AMPI_Scatter(void *sendbuf,
                     MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Scatter
+ * TLM variant of \ref AMPI_Scatter. Bundled (Association-by-Address)
  */
 int TLM_AMPI_Scatter(void *sendbuf,
                      int sendcnt,
@@ -326,6 +338,18 @@ int TLM_AMPI_Scatter(void *sendbuf,
                      void *recvbuf,
                      int recvcnt,
                      MPI_Datatype recvtype,
+                     int root,
+                     MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Scatter. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Scatter(void *sendbuf, void *shadowsendbuf,
+                     int sendcnt,
+                     MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                     void *recvbuf, void *shadowrecvbuf,
+                     int recvcnt,
+                     MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
                      int root,
                      MPI_Comm comm);
 
@@ -352,7 +376,7 @@ int BW_AMPI_Allgather(void *sendbuf,
                       MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Allgather
+ * TLM variant of \ref AMPI_Allgather. Bundled (Association-by-Address)
  */
 int TLM_AMPI_Allgather(void *sendbuf,
                        int sendcount,
@@ -360,6 +384,17 @@ int TLM_AMPI_Allgather(void *sendbuf,
                        void *recvbuf,
                        int recvcount,
                        MPI_Datatype recvtype,
+                       MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Allgather. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Allgather(void *sendbuf, void *shadowsendbuf,
+                       int sendcount,
+                       MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                       void *recvbuf, void *shadowrecvbuf,
+                       int recvcount,
+                       MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
                        MPI_Comm comm);
 
 /**
@@ -390,7 +425,7 @@ int BW_AMPI_Gatherv(void *sendbuf,
                     MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Gatherv
+ * TLM variant of \ref AMPI_Gatherv. Bundled (Association-by-Address)
  */
 int TLM_AMPI_Gatherv(void *sendbuf,
                      int sendcnt,
@@ -401,6 +436,19 @@ int TLM_AMPI_Gatherv(void *sendbuf,
                      MPI_Datatype recvtype,
                      int root,
                      MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Gatherv. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Gatherv(void *sendbuf, void *shadowsendbuf,
+                     int sendcnt,
+                     MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                     void *recvbuf, void *shadowrecvbuf,
+                     int *recvcnts,
+                     int *displs, int *shadowdispls,
+                     MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
+                     int root,
+                     MPI_Comm comm) ;
 
 /**
  * forward sweep variant of \ref AMPI_Scatterv
@@ -428,7 +476,7 @@ int BW_AMPI_Scatterv(void *sendbuf,
                      int root, MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Scatterv
+ * TLM variant of \ref AMPI_Scatterv. Bundled (Association-by-Address)
  * NOTE: sendcnts and displs are passed with a non-NULL pointer then they must be allocated to the correct size
  */
 int TLM_AMPI_Scatterv(void *sendbuf,
@@ -438,6 +486,18 @@ int TLM_AMPI_Scatterv(void *sendbuf,
                       void *recvbuf,
                       int recvcnt,
                       MPI_Datatype recvtype,
+                      int root, MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Scatterv. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Scatterv(void *sendbuf, void *shadowsendbuf,
+                      int *sendcnts,
+                      int *displs, int *shadowdispls,
+                      MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                      void *recvbuf, void *shadowrecvbuf,
+                      int recvcnt,
+                      MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
                       int root, MPI_Comm comm);
 
 /**
@@ -466,7 +526,7 @@ int BW_AMPI_Allgatherv(void *sendbuf,
                        MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Allgatherv
+ * TLM variant of \ref AMPI_Allgatherv. Bundled (Association-by-Address)
  * NOTE: recvcnts and displs are passed with a non-NULL pointer then they must be allocated to the correct size
  */
 int TLM_AMPI_Allgatherv(void *sendbuf,
@@ -476,6 +536,18 @@ int TLM_AMPI_Allgatherv(void *sendbuf,
                         int *recvcnts,
                         int *displs,
                         MPI_Datatype recvtype,
+                        MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Allgatherv. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Allgatherv(void *sendbuf, void *shadowsendbuf,
+                        int sendcnt,
+                        MPI_Datatype sendtype, MPI_Datatype shadowsendtype,
+                        void *recvbuf, void *shadowrecvbuf,
+                        int *recvcnts,
+                        int *displs, int *shadowdispls,
+                        MPI_Datatype recvtype, MPI_Datatype shadowrecvtype,
                         MPI_Comm comm);
 
 /**
@@ -497,11 +569,20 @@ int BW_AMPI_Bcast(void* buf,
 		  MPI_Comm comm);
 
 /**
- * TLM variant of \ref AMPI_Bcast
+ * TLM variant of \ref AMPI_Bcast. Bundled (Association-by-Address)
  */
 int TLM_AMPI_Bcast(void* buf,
                    int count,
                    MPI_Datatype datatype,
+                   int root,
+                   MPI_Comm comm);
+
+/**
+ * Tangent diff variant of \ref AMPI_Bcast. Shadowed (Association-by-Name)
+ */
+int TLS_AMPI_Bcast(void* buf, void* shadowbuf,
+                   int count,
+                   MPI_Datatype datatype, MPI_Datatype shadowdatatype,
                    int root,
                    MPI_Comm comm);
 
@@ -517,9 +598,10 @@ int FWB_AMPI_Reduce(void* sbuf,
 		   MPI_Comm comm);
 
 /**
- * Adjoint forward sweep of \ref AMPI_Reduce. Shadowed (Association-by-Name)
+ * Adjoint forward sweep of \ref AMPI_Reduce. Shadowed (Association-by-Name).
+ * NOTE: in the forward sweep, shadowed mode passes only the primal values.
  */
-int FWS_AMPI_Reduce(void* sbuf,
+int FW_AMPI_Reduce(void* sbuf,
                     void* rbuf,
                     int count,
                     MPI_Datatype datatype,
@@ -584,8 +666,9 @@ int FWB_AMPI_Allreduce(void* sbuf,
 
 /**
  * Adjoint forward sweep of \ref AMPI_Allreduce, shadowed (i.e. Association-by-Name)
+ * NOTE: in the forward sweep, shadowed mode passes only the primal values.
  */
-int FWS_AMPI_Allreduce(void* sbuf,
+int FW_AMPI_Allreduce(void* sbuf,
                        void* rbuf,
                        int count,
                        MPI_Datatype datatype,

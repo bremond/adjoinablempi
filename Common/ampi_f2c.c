@@ -32,6 +32,11 @@ void ampi_init_nt_(int* err_code) {
 void ampi_finalize_nt_(int* err_code) {
   *err_code = AMPI_Finalize_NT();}
 
+void ampi_comm_size_(MPI_Fint *commF, int *size, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = MPI_Comm_size(commC, size);
+}
+
 void ampi_comm_rank_(MPI_Fint *commF, int *rank, int* err_code) {
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
   *err_code = MPI_Comm_rank(commC, rank);
@@ -101,7 +106,7 @@ void fw_ampi_irecv_(void* buf,
                     int *pairedWithF,
                     int *commF,
                     MPI_Fint *requestF,
-                    int *err_code){
+                    int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
   MPI_Request request   = MPI_Request_f2c(*requestF);
   AMPI_PairedWith pairedWith = pairedWithTable[*pairedWithF] ;
@@ -298,7 +303,164 @@ void tls_ampi_barrier_(int *commF, int* err_code) {
   *err_code = TLS_AMPI_Barrier(commC) ;
 }
 
-void fws_ampi_reduce_(void* sbuf, void* rbuf,
+void fw_ampi_gather_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Gather(sbuf, *scount, stype, rbuf, *rcount, rtype, *root, commC) ;
+}
+
+void bw_ampi_gather_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Gather(sbuf, *scount, stype, rbuf, *rcount, rtype, *root, commC) ;
+}
+
+void tls_ampi_gather_(void* sbuf, void* shadowsbuf, int *scount, MPI_Fint *stypeF, MPI_Fint *shadowstypeF, void* rbuf, void* shadowrbuf, int *rcount, MPI_Fint *rtypeF, MPI_Fint *shadowrtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype shadowstype = MPI_Type_f2c(*shadowstypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Datatype shadowrtype = MPI_Type_f2c(*shadowrtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Gather(sbuf, shadowsbuf, *scount, stype, shadowstype, rbuf, shadowrbuf, *rcount, rtype, shadowrtype, *root, commC) ;
+}
+
+void fw_ampi_scatter_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Scatter(sbuf, *scount, stype, rbuf, *rcount, rtype, *root, commC) ;
+}
+
+void bw_ampi_scatter_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Scatter(sbuf, *scount, stype, rbuf, *rcount, rtype, *root, commC) ;
+}
+
+void tls_ampi_scatter_(void* sbuf, void* shadowsbuf, int *scount, MPI_Fint *stypeF, MPI_Fint *shadowstypeF, void* rbuf, void* shadowrbuf, int *rcount, MPI_Fint *rtypeF, MPI_Fint *shadowrtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype shadowstype = MPI_Type_f2c(*shadowstypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Datatype shadowrtype = MPI_Type_f2c(*shadowrtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Scatter(sbuf, shadowsbuf, *scount, stype, shadowstype, rbuf, shadowrbuf, *rcount, rtype, shadowrtype, *root, commC) ;
+}
+
+void fw_ampi_allgather_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Allgather(sbuf, *scount, stype, rbuf, *rcount, rtype, commC) ;
+}
+
+void bw_ampi_allgather_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Allgather(sbuf, *scount, stype, rbuf, *rcount, rtype, commC) ;
+}
+
+void tls_ampi_allgather_(void* sbuf, void* shadowsbuf, int *scount, MPI_Fint *stypeF, MPI_Fint *shadowstypeF, void* rbuf, void* shadowrbuf, int *rcount, MPI_Fint *rtypeF, MPI_Fint *shadowrtypeF, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype shadowstype = MPI_Type_f2c(*shadowstypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Datatype shadowrtype = MPI_Type_f2c(*shadowrtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Allgather(sbuf, shadowsbuf, *scount, stype, shadowstype, rbuf, shadowrbuf, *rcount, rtype, shadowrtype, commC) ;
+}
+
+void fw_ampi_gatherv_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int* rcounts, int *displs, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Gatherv(sbuf, *scount, stype, rbuf, rcounts, displs, rtype, *root, commC) ;
+}
+
+void bw_ampi_gatherv_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcounts, int *displs, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Gatherv(sbuf, *scount, stype, rbuf, rcounts, displs, rtype, *root, commC) ;
+}
+
+void tls_ampi_gatherv_(void* sbuf, void* shadowsbuf, int *scount, MPI_Fint *stypeF, MPI_Fint *shadowstypeF, void* rbuf, void* shadowrbuf, int *rcounts, int *displs, int *shadowdispls, MPI_Fint *rtypeF, MPI_Fint *shadowrtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype shadowstype = MPI_Type_f2c(*shadowstypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Datatype shadowrtype = MPI_Type_f2c(*shadowrtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Gatherv(sbuf, shadowsbuf, *scount, stype, shadowstype, rbuf, shadowrbuf, rcounts, displs, shadowdispls, rtype, shadowrtype, *root, commC) ;
+}
+
+void fw_ampi_scatterv_(void* sbuf, int *scounts, int *displs, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Scatterv(sbuf, scounts, displs, stype, rbuf, *rcount, rtype, *root, commC) ;
+}
+
+void bw_ampi_scatterv_(void* sbuf, int *scounts, int *displs, MPI_Fint *stypeF, void* rbuf, int *rcount, MPI_Fint *rtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Scatterv(sbuf, scounts, displs, stype, rbuf, *rcount, rtype, *root, commC) ;
+}
+
+void tls_ampi_scatterv_(void* sbuf, void* shadowsbuf, int *scounts, int *displs, int *shadowdispls, MPI_Fint *stypeF, MPI_Fint *shadowstypeF, void* rbuf, void* shadowrbuf, int *rcount, MPI_Fint *rtypeF, MPI_Fint *shadowrtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype shadowstype = MPI_Type_f2c(*shadowstypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Datatype shadowrtype = MPI_Type_f2c(*shadowrtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Scatterv(sbuf, shadowsbuf, scounts, displs, shadowdispls, stype, shadowstype, rbuf, shadowrbuf, *rcount, rtype, shadowrtype, *root, commC) ;
+}
+
+void fw_ampi_allgatherv_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcounts, int *displs, MPI_Fint *rtypeF, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Allgatherv(sbuf, *scount, stype, rbuf, rcounts, displs, rtype, commC) ;
+}
+
+void bw_ampi_allgatherv_(void* sbuf, int *scount, MPI_Fint *stypeF, void* rbuf, int *rcounts, int *displs, MPI_Fint *rtypeF, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Allgatherv(sbuf, *scount, stype, rbuf, rcounts, displs, rtype, commC) ;
+}
+
+void tls_ampi_allgatherv_(void* sbuf, void* shadowsbuf, int *scount, MPI_Fint *stypeF, MPI_Fint *shadowstypeF, void* rbuf, void* shadowrbuf, int *rcounts, int *displs, int *shadowdispls, MPI_Fint *rtypeF, MPI_Fint *shadowrtypeF, int *commF, int* err_code) {
+  MPI_Datatype stype = MPI_Type_f2c(*stypeF) ;
+  MPI_Datatype shadowstype = MPI_Type_f2c(*shadowstypeF) ;
+  MPI_Datatype rtype = MPI_Type_f2c(*rtypeF) ;
+  MPI_Datatype shadowrtype = MPI_Type_f2c(*shadowrtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Allgatherv(sbuf, shadowsbuf, *scount, stype, shadowstype, rbuf, shadowrbuf, rcounts, displs, shadowdispls, rtype, shadowrtype, commC) ;
+}
+
+void fw_ampi_bcast_(void* buf, int *count, MPI_Fint *typeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype type = MPI_Type_f2c(*typeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Bcast(buf, *count, type, *root, commC) ;
+}
+
+void bw_ampi_bcast_(void* buf, int *count, MPI_Fint *typeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype type = MPI_Type_f2c(*typeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BW_AMPI_Bcast(buf, *count, type, *root, commC) ;
+}
+
+void tls_ampi_bcast_(void* buf, void* shadowbuf, int *count, MPI_Fint *typeF, MPI_Fint *shadowtypeF, int *root, int *commF, int* err_code) {
+  MPI_Datatype type = MPI_Type_f2c(*typeF) ;
+  MPI_Datatype shadowtype = MPI_Type_f2c(*shadowtypeF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Bcast(buf, shadowbuf, *count, type, shadowtype, *root, commC) ;
+}
+
+void fw_ampi_reduce_(void* sbuf, void* rbuf,
                       int *count,
                       MPI_Fint *datatypeF,
                       MPI_Fint *opF,
@@ -308,7 +470,7 @@ void fws_ampi_reduce_(void* sbuf, void* rbuf,
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
   MPI_Op op = MPI_Op_f2c(*opF) ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
-  *err_code = FWS_AMPI_Reduce(sbuf, rbuf, *count, datatype,
+  *err_code = FW_AMPI_Reduce(sbuf, rbuf, *count, datatype,
                               op, *root, commC) ;
 }
 
@@ -352,4 +514,57 @@ void tls_ampi_reduce_(void* sbuf, void* shadowsbuf,
                               datatype, shadowdatatype,
                               op, uopd,
                               *root, commC) ;
+}
+
+void fw_ampi_allreduce_(void* sbuf, void* rbuf,
+                      int *count,
+                      MPI_Fint *datatypeF,
+                      MPI_Fint *opF,
+                      int *commF,
+                      int *err_code) {
+  MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Op op = MPI_Op_f2c(*opF) ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = FW_AMPI_Allreduce(sbuf, rbuf, *count, datatype,
+                              op, commC) ;
+}
+
+void bws_ampi_allreduce_(void* sbuf, void* sbufb,
+                      void* rbuf, void* rbufb,
+                      int *count,
+                      MPI_Fint *datatypeF, MPI_Fint *datatypebF,
+                      MPI_Fint *opF, void* uopbF,
+                      int *commF,
+                      int *err_code) {
+  MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Datatype datatypeb = MPI_Type_f2c(*datatypebF) ;
+  MPI_Op op = MPI_Op_f2c(*opF) ;
+  TLM_userFunctionF* uopb = 0 /*???(uopbF)*/ ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = BWS_AMPI_Allreduce(sbuf, sbufb,
+                              rbuf, rbufb,
+                              *count,
+                              datatype, datatypeb,
+                              op, uopb,
+                              commC) ;
+}
+
+void tls_ampi_allreduce_(void* sbuf, void* shadowsbuf,
+                      void* rbuf, void* shadowrbuf,
+                      int *count,
+                      MPI_Fint *datatypeF, MPI_Fint *shadowdatatypeF,
+                      MPI_Fint *opF, void* uopdF,
+                      int *commF,
+                      int *err_code) {
+  MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
+  MPI_Datatype shadowdatatype = MPI_Type_f2c(*shadowdatatypeF) ;
+  MPI_Op op = MPI_Op_f2c(*opF) ;
+  TLM_userFunctionF* uopd = 0 /*???(uopdF)*/ ;
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Allreduce(sbuf, shadowsbuf,
+                              rbuf, shadowrbuf,
+                              *count,
+                              datatype, shadowdatatype,
+                              op, uopd,
+                              commC) ;
 }
