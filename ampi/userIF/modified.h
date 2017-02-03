@@ -542,6 +542,35 @@ int AMPI_Allgatherv(void *sendbuf,
                     MPI_Datatype recvtype,
                     MPI_Comm comm);
 
+
+int AMPI_Comm_dup(MPI_Comm comm, MPI_Comm *dupComm) ;
+
+/**
+ * Same as \ref AMPI_Comm_dup but manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade)
+ */
+int TLS_AMPI_Comm_dup(MPI_Comm comm, MPI_Comm *dupComm) ;
+
+int AMPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) ;
+
+/**
+ * Same as \ref AMPI_Comm_split but manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade)
+ */
+int TLS_AMPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) ;
+
+int AMPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) ;
+
+/**
+ * Same as \ref AMPI_Comm_create but manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade)
+ */
+int TLS_AMPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) ;
+
+int AMPI_Comm_free(MPI_Comm *comm) ;
+
+/**
+ * Same as \ref AMPI_Comm_free but manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade)
+ */
+int TLS_AMPI_Comm_free(MPI_Comm *comm) ;
+
 /**
  * all parameters as in the MPI standard with exceptions as listed
  * @param base

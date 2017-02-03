@@ -270,10 +270,14 @@ int BW_AMPI_Irecv (void* buf,
   BK_AMPI_get_AMPI_Request(&tracedRequest,ampiRequest,1);
 #else 
   BK_AMPI_get_AMPI_Request(plainRequest,ampiRequest,0);
+  plainRequest =&(ampiRequest->bwRequest);
 #endif
 #endif
   assert(ampiRequest->origin==AMPI_RECV_ORIGIN) ;
-  if (!(
+  if ((*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(ampiRequest->datatype)!=AMPI_ACTIVE) {
+    /* If the type was passive, there is no BW communication: */
+    rc = MPI_SUCCESS ;
+  } else if (!(
 	ampiRequest->pairedWith==AMPI_FROM_SEND 
 	|| 
 	ampiRequest->pairedWith==AMPI_FROM_ISEND_WAIT
@@ -334,6 +338,10 @@ int TLS_AMPI_Irecv (void* buf, void* shadowbuf,
 #else 
   ampiRequest=request;
 #endif
+  /* AMPI_Irecv of non-differentiable values must use a dummy shadowbuf */
+  if ((*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(datatype)!=AMPI_ACTIVE) {
+    shadowbuf = NULL ;
+  }
   /* fill in the info needed to Recv the shadowbuf later.
   * [llh]: I don't need pairedWith nor tracedRequest... */
   ampiRequest->endPoint=source;
@@ -343,8 +351,8 @@ int TLS_AMPI_Irecv (void* buf, void* shadowbuf,
   ampiRequest->comm=comm;
   ampiRequest->origin=AMPI_RECV_ORIGIN;
   ampiRequest->pairedWith=pairedWith;
-  ampiRequest->adjointBuf=shadowbuf ;
   ampiRequest->tracedRequest=ampiRequest->plainRequest;
+  ampiRequest->adjointBuf=shadowbuf ;
   rc= MPI_Irecv(buf,
                 count,
                 datatype,
@@ -589,10 +597,14 @@ int BW_AMPI_Isend (void* buf,
   BK_AMPI_get_AMPI_Request(&tracedRequest,ampiRequest,1);
 #else 
   BK_AMPI_get_AMPI_Request(plainRequest,ampiRequest,0);
+  plainRequest =&(ampiRequest->bwRequest);
 #endif
 #endif
   assert(ampiRequest->origin==AMPI_SEND_ORIGIN) ;
-  if (!(
+  if ((*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(ampiRequest->datatype)!=AMPI_ACTIVE) {
+    /* If the type was passive, there is no BW communication: */
+    rc = MPI_SUCCESS ;
+  } else if (!(
 	ampiRequest->pairedWith==AMPI_TO_RECV 
 	|| 
 	ampiRequest->pairedWith==AMPI_TO_IRECV_WAIT
@@ -656,7 +668,13 @@ int TLS_AMPI_Isend (void* buf, void* shadowbuf,
 #else 
   ampiRequest=request;
 #endif
-  /* fill in the other info. [llh]:I need none of those... */
+  /* AMPI_Isend of non-differentiable values must use a dummy shadowbuf */
+  int sendShadow = 1 ;
+  if ((*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(datatype)!=AMPI_ACTIVE) {
+    shadowbuf = NULL ;
+    sendShadow = 0 ;
+  }
+  /* fill in the other info. */
   ampiRequest->endPoint=dest;
   ampiRequest->tag=tag;
   ampiRequest->count=count;
@@ -664,14 +682,17 @@ int TLS_AMPI_Isend (void* buf, void* shadowbuf,
   ampiRequest->comm=comm;
   ampiRequest->origin=AMPI_SEND_ORIGIN;
   ampiRequest->pairedWith=pairedWith;
+  ampiRequest->adjointBuf=shadowbuf ;
   (*ourADTOOL_AMPI_FPCollection.mapBufForAdjoint_fp)(ampiRequest,shadowbuf);
   ampiRequest->tracedRequest=ampiRequest->plainRequest;
   rc = MPI_Isend(buf, count, datatype, dest, tag, comm,
                      &(ampiRequest->plainRequest)) ;
-  assert(rc==MPI_SUCCESS);
-  shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
-  rc = MPI_Isend(shadowbuf, count, shadowdatatype, dest, tag, shadowcomm,
-                 &(ampiRequest->shadowRequest)) ;
+  if (sendShadow) {
+    assert(rc==MPI_SUCCESS);
+    shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(comm) ;
+    rc = MPI_Isend(shadowbuf, count, shadowdatatype, dest, tag, shadowcomm,
+                   &(ampiRequest->shadowRequest)) ;
+  }
 #ifdef AMPI_FORTRANCOMPATIBLE
   *request = ampiRequest->plainRequest ;
   BK_AMPI_put_AMPI_Request(ampiRequest);
@@ -696,11 +717,13 @@ int FW_AMPI_Wait(AMPI_Request *request,
 #endif 
   rc=MPI_Wait(plainRequest,
 	      status);
-  if (rc==MPI_SUCCESS && (*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(ampiRequest->datatype)==AMPI_ACTIVE) {
-    (*ourADTOOL_AMPI_FPCollection.writeData_fp)(ampiRequest->buf,&ampiRequest->count);
-    if(ampiRequest->tag==MPI_ANY_TAG) ampiRequest->tag=status->MPI_TAG;
-    if(ampiRequest->endPoint==MPI_ANY_SOURCE) ampiRequest->endPoint=status->MPI_SOURCE;
-    (*ourADTOOL_AMPI_FPCollection.push_CallCode_fp)(AMPI_WAIT);
+  if (rc==MPI_SUCCESS) {
+    if ((*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(ampiRequest->datatype)==AMPI_ACTIVE) {
+      (*ourADTOOL_AMPI_FPCollection.writeData_fp)(ampiRequest->buf,&ampiRequest->count);
+      if(ampiRequest->tag==MPI_ANY_TAG) ampiRequest->tag=status->MPI_TAG;
+      if(ampiRequest->endPoint==MPI_ANY_SOURCE) ampiRequest->endPoint=status->MPI_SOURCE;
+      (*ourADTOOL_AMPI_FPCollection.push_CallCode_fp)(AMPI_WAIT);
+    }
     (*ourADTOOL_AMPI_FPCollection.push_AMPI_Request_fp)(ampiRequest);
   }
   return rc;
@@ -718,39 +741,50 @@ int BW_AMPI_Wait(AMPI_Request *request,
 #endif 
   /* pop request  */
   (*ourADTOOL_AMPI_FPCollection.pop_AMPI_Request_fp)(ampiRequest);
-  switch(ampiRequest->origin) { 
-  case AMPI_SEND_ORIGIN: { 
-    (*ourADTOOL_AMPI_FPCollection.setAdjointCountAndTempBuf_fp)(ampiRequest);   
-    rc=MPI_Irecv(ampiRequest->adjointTempBuf,
-		 ampiRequest->adjointCount,
-		 ampiRequest->datatype,
-		 ampiRequest->endPoint,
-		 ampiRequest->tag,
-		 ampiRequest->comm,
-		 &(ampiRequest->plainRequest));
-    break;
-  }
-  case AMPI_RECV_ORIGIN: { 
-    (*ourADTOOL_AMPI_FPCollection.setAdjointCount_fp)(ampiRequest);
-    rc=MPI_Isend((*ourADTOOL_AMPI_FPCollection.rawAdjointData_fp)(ampiRequest->adjointBuf),
-		 ampiRequest->adjointCount,
-		 ampiRequest->datatype,
-		 ampiRequest->endPoint,
-		 ampiRequest->tag,
-		 ampiRequest->comm,
-		 &(ampiRequest->plainRequest));
-    break;
-  }
-  default:  
-    rc=MPI_Abort(ampiRequest->comm, MPI_ERR_TYPE);
-    break;
-  }
+  MPI_Request bwRequest ;
+  if ((*ourADTOOL_AMPI_FPCollection.isActiveType_fp)(ampiRequest->datatype)==AMPI_ACTIVE) {
+    switch(ampiRequest->origin) { 
+    case AMPI_SEND_ORIGIN: { 
+      (*ourADTOOL_AMPI_FPCollection.setAdjointCountAndTempBuf_fp)(ampiRequest);   
+      rc=MPI_Irecv(ampiRequest->adjointTempBuf,
+                   ampiRequest->adjointCount,
+                   ampiRequest->datatype,
+                   ampiRequest->endPoint,
+                   ampiRequest->tag,
+                   ampiRequest->comm,
+                   &bwRequest/*(ampiRequest->plainRequest)*/);
+      break;
+    }
+    case AMPI_RECV_ORIGIN: { 
+      (*ourADTOOL_AMPI_FPCollection.setAdjointCount_fp)(ampiRequest);
+      rc=MPI_Isend((*ourADTOOL_AMPI_FPCollection.rawAdjointData_fp)(ampiRequest->adjointBuf),
+                   ampiRequest->adjointCount,
+                   ampiRequest->datatype,
+                   ampiRequest->endPoint,
+                   ampiRequest->tag,
+                   ampiRequest->comm,
+                   &bwRequest/*(ampiRequest->plainRequest)*/);
+      break;
+    }
+    default:  
+      rc=MPI_Abort(ampiRequest->comm, MPI_ERR_TYPE);
+      break;
+    }
+#ifdef AMPI_REQUESTONTRACE
+    ampiRequest->plainRequest=bwRequest;
+#endif
 #ifdef AMPI_FORTRANCOMPATIBLE 
-  *request=ampiRequest->plainRequest;
+    ampiRequest->plainRequest=*request;
+    ampiRequest->bwRequest=bwRequest;
+#endif
+#ifdef AMPI_REQUESTONTRACE
+    /* [llh] TRACE users, do you really need the next line? */
+    *request=bwRequest;
 #endif
 #if defined AMPI_FORTRANCOMPATIBLE || defined AMPI_REQUESTONTRACE
-  BK_AMPI_put_AMPI_Request(ampiRequest);
+    BK_AMPI_put_AMPI_Request(ampiRequest);
 #endif
+  }
   return rc;
 }
 
@@ -778,18 +812,23 @@ int TLS_AMPI_Wait(AMPI_Request *request,
   ampiRequest=request;
 #endif 
   rc=MPI_Wait(&(ampiRequest->plainRequest), &status1);
-  assert(rc==MPI_SUCCESS);
   switch(ampiRequest->origin) { 
-  case AMPI_SEND_ORIGIN: { 
-    rc=MPI_Wait(&(ampiRequest->shadowRequest), status);
+  case AMPI_SEND_ORIGIN: {
+    if (ampiRequest->adjointBuf) {
+      assert(rc==MPI_SUCCESS);
+      rc=MPI_Wait(&(ampiRequest->shadowRequest), status);
+    }
     break ;
   }
   case AMPI_RECV_ORIGIN: { 
-    MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(ampiRequest->comm) ;
-    rc = MPI_Recv(ampiRequest->adjointBuf, ampiRequest->count, ampiRequest->datatype,
-                  (ampiRequest->endPoint==MPI_ANY_SOURCE?status1.MPI_SOURCE:ampiRequest->endPoint),
-                  (ampiRequest->tag==MPI_ANY_TAG?status1.MPI_TAG:ampiRequest->tag),
-                  shadowcomm, status) ;
+    assert(rc==MPI_SUCCESS);
+    if (ampiRequest->adjointBuf) {
+      MPI_Comm shadowcomm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(ampiRequest->comm) ;
+      rc = MPI_Recv(ampiRequest->adjointBuf, ampiRequest->count, ampiRequest->datatype,
+                    (ampiRequest->endPoint==MPI_ANY_SOURCE?status1.MPI_SOURCE:ampiRequest->endPoint),
+                    (ampiRequest->tag==MPI_ANY_TAG?status1.MPI_TAG:ampiRequest->tag),
+                    shadowcomm, status) ;
+    }
     break ;
   }
   default:
@@ -1043,13 +1082,13 @@ int BW_AMPI_Scatter(void *sendbuf,
   if (commSizeForRootOrNull>0) MPI_Type_size(recvtype,&rTypeSize);
   for (i=0;i<commSizeForRootOrNull;++i) {
     if (! (i==root && recvcnt==0)) { /* don't increment the segment if "in place" on root */
-      void *tempBufSeqment=(char*)tempBuf+i*sendcnt*rTypeSize;
+      void *tempBufSegment=(char*)tempBuf+i*sendcnt*rTypeSize;
       void *sendBufSegment=(char*)sendbuf+i*sendcnt*rTypeSize;
       (*ourADTOOL_AMPI_FPCollection.incrementAdjoint_fp)(sendcnt,
                                                          sendtype,
                                                          comm,
                                                          sendBufSegment,
-                                                         tempBufSeqment, idx);
+                                                         tempBufSegment, idx);
     }
   }
   if (commSizeForRootOrNull>0 && tempBuf)(*ourADTOOL_AMPI_FPCollection.releaseAdjointTempBuf_fp)(tempBuf);
@@ -2620,6 +2659,55 @@ derivedTypeData* getDTypeData() {
     dat = newdat;
   }
   return dat;
+}
+
+/**
+ * In addition to MPI_Comm_dup(), creates and registers a shadow comm
+ */
+int TLS_AMPI_Comm_dup(MPI_Comm comm, MPI_Comm *dupComm) {
+  int rc = MPI_Comm_dup(comm, dupComm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowDupComm ;
+  rc = MPI_Comm_dup(*dupComm, &shadowDupComm) ;
+  (*ourADTOOL_AMPI_FPCollection.addShadowComm_fp)(*dupComm, shadowDupComm) ;
+  return rc;
+}
+
+/**
+ * In addition to MPI_Comm_split(), creates and registers a shadow comm
+ */
+int TLS_AMPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) {
+  int rc = MPI_Comm_split(comm, color, key, dupComm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowDupComm ;
+  rc = MPI_Comm_dup(*dupComm, &shadowDupComm) ;
+  (*ourADTOOL_AMPI_FPCollection.addShadowComm_fp)(*dupComm, shadowDupComm) ;
+  return rc;
+}
+
+/**
+ * In addition to MPI_Comm_create(), creates and registers a shadow comm
+ */
+int TLS_AMPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) {
+  int rc = MPI_Comm_create(comm, group, dupComm) ;
+  assert(rc==MPI_SUCCESS);
+  MPI_Comm shadowDupComm ;
+  rc = MPI_Comm_dup(*dupComm, &shadowDupComm) ;
+  (*ourADTOOL_AMPI_FPCollection.addShadowComm_fp)(*dupComm, shadowDupComm) ;
+  return rc;
+}
+
+/**
+ * In addition to MPI_Comm_free(), frees the duplicate shadow comm
+ */
+int TLS_AMPI_Comm_free(MPI_Comm *comm) {
+  if (comm) {
+    MPI_Comm shadowComm = (*ourADTOOL_AMPI_FPCollection.getShadowComm_fp)(*comm) ;
+    (*ourADTOOL_AMPI_FPCollection.delShadowComm_fp)(*comm) ;
+    if (shadowComm!=*comm) MPI_Comm_free(&shadowComm) ;
+    return MPI_Comm_free(comm) ;
+  } else
+    return 0;
 }
 
 void releaseDTypeData() {

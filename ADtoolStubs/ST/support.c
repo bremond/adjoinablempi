@@ -12,7 +12,13 @@
 #include <assert.h>
 #include "ampi/adTool/support.h"
 
-MPI_Comm ADTOOL_AMPI_COMM_WORLD_SHADOW;
+struct AMPI_ShadowComm_list {
+  struct AMPI_ShadowComm_list *next_p;
+  MPI_Comm comm ;
+  MPI_Comm shadowComm ;
+} ;
+
+struct AMPI_ShadowComm_list * ADTOOL_AMPI_SHADOWCOMM_LIST = NULL ;
 
 struct AMPI_Request_stack {
   struct AMPI_Request_stack *next_p;
@@ -31,7 +37,11 @@ struct AMPI_Request_stack {
 int AMPI_Init_NT(int* argc, char*** argv) {
   int rc = MPI_Init(argc, argv);
   ADTOOL_AMPI_setupTypes() ;
-  rc = MPI_Comm_dup(MPI_COMM_WORLD, &ADTOOL_AMPI_COMM_WORLD_SHADOW) ;
+  MPI_Comm worldDup ;
+  int rc2 = MPI_Comm_dup(MPI_COMM_WORLD, &worldDup) ;
+  assert(rc2==MPI_SUCCESS);
+  ADTOOL_AMPI_SHADOWCOMM_LIST = NULL ;
+  ADTOOL_AMPI_addShadowComm(MPI_COMM_WORLD, worldDup) ;
   ourADTOOL_AMPI_FPCollection.pushBcastInfo_fp=&ADTOOL_AMPI_pushBcastInfo;
   ourADTOOL_AMPI_FPCollection.popBcastInfo_fp=&ADTOOL_AMPI_popBcastInfo;
   ourADTOOL_AMPI_FPCollection.pushDoubleArray_fp=&ADTOOL_AMPI_pushDoubleArray;
@@ -85,12 +95,14 @@ int AMPI_Init_NT(int* argc, char*** argv) {
   ourADTOOL_AMPI_FPCollection.allocateTempActiveBuf_fp=&ADTOOL_AMPI_allocateTempActiveBuf;
   ourADTOOL_AMPI_FPCollection.releaseTempActiveBuf_fp=&ADTOOL_AMPI_releaseTempActiveBuf;
   ourADTOOL_AMPI_FPCollection.copyActiveBuf_fp=&ADTOOL_AMPI_copyActiveBuf;
-  ourADTOOL_AMPI_FPCollection.getShadowComm_fp=&ADTOOL_AMPI_getShadowComm ;
   ourADTOOL_AMPI_FPCollection.tangentMultiply_fp=&ADTOOL_AMPI_tangentMultiply ;
   ourADTOOL_AMPI_FPCollection.tangentMin_fp=&ADTOOL_AMPI_tangentMin ;
   ourADTOOL_AMPI_FPCollection.tangentMax_fp=&ADTOOL_AMPI_tangentMax ;
   ourADTOOL_AMPI_FPCollection.pushBuffer_fp=&ADTOOL_AMPI_pushBuffer ;
   ourADTOOL_AMPI_FPCollection.popBuffer_fp=&ADTOOL_AMPI_popBuffer ;
+  ourADTOOL_AMPI_FPCollection.addShadowComm_fp=&ADTOOL_AMPI_addShadowComm ;
+  ourADTOOL_AMPI_FPCollection.getShadowComm_fp=&ADTOOL_AMPI_getShadowComm ;
+  ourADTOOL_AMPI_FPCollection.delShadowComm_fp=&ADTOOL_AMPI_delShadowComm ;
 #ifdef AMPI_FORTRANCOMPATIBLE
   ourADTOOL_AMPI_FPCollection.fortransetuptypes__fp=&adtool_ampi_fortransetuptypes_;
   ourADTOOL_AMPI_FPCollection.fortrancleanuptypes__fp=&adtool_ampi_fortrancleanuptypes_;
@@ -148,6 +160,9 @@ void ADTOOL_AMPI_popReduceInfo(void** sbuf,
 			       void **idx) {
 }
 
+extern void pushinteger4array(int *x, int n) ;
+extern void popinteger4array(int *x, int n) ;
+
 void ADTOOL_AMPI_pushSRinfo(void* buf, 
 			    int count,
 			    MPI_Datatype datatype, 
@@ -155,6 +170,9 @@ void ADTOOL_AMPI_pushSRinfo(void* buf,
 			    int tag,
 			    AMPI_PairedWith pairedWith,
 			    MPI_Comm comm) {
+  /* [llh] TODO: this is not nice: we should call pushinteger4() instead ! */
+  pushinteger4array(&src,1) ;
+  pushinteger4array(&tag,1) ;
 }
 
 void ADTOOL_AMPI_popSRinfo(void** buf,
@@ -165,6 +183,9 @@ void ADTOOL_AMPI_popSRinfo(void** buf,
 			   AMPI_PairedWith* pairedWith,
 			   MPI_Comm* comm,
 			   void **idx) { 
+  /* [llh] TODO: this is not nice: we should call popinteger4() instead ! */
+  popinteger4array(tag,1) ;
+  popinteger4array(src,1) ;
 }
 
 void ADTOOL_AMPI_pushGSinfo(int commSizeForRootOrNull,
@@ -176,9 +197,11 @@ void ADTOOL_AMPI_pushGSinfo(int commSizeForRootOrNull,
                             MPI_Datatype type,
                             int  root,
                             MPI_Comm comm) {
+  pushinteger4array(&commSizeForRootOrNull,1) ;
 }
 
 void ADTOOL_AMPI_popGScommSizeForRootOrNull(int *commSizeForRootOrNull) {
+  popinteger4array(commSizeForRootOrNull,1) ;
 }
 
 void ADTOOL_AMPI_popGSinfo(int commSizeForRootOrNull,
@@ -202,6 +225,7 @@ void ADTOOL_AMPI_pushGSVinfo(int commSizeForRootOrNull,
                              MPI_Datatype type,
                              int  root,
                              MPI_Comm comm) {
+  pushinteger4array(&commSizeForRootOrNull,1) ;
 }
 
 void ADTOOL_AMPI_popGSVinfo(int commSizeForRootOrNull,
@@ -273,11 +297,49 @@ MPI_Comm ADTOOL_AMPI_pop_comm() {
   return 0;
 }
 
-/** Get the shadow communicator used to separate from the
- * communication graph of original variables */
+/**
+ * Register the info that the shadow communicator "dupComm"
+ * has been created for the new communicator "comm"
+ */
+void ADTOOL_AMPI_addShadowComm(MPI_Comm comm, MPI_Comm dupComm) {
+  struct AMPI_ShadowComm_list *newCell =
+    (struct AMPI_ShadowComm_list *)malloc(sizeof(struct AMPI_ShadowComm_list)) ;
+  newCell->next_p = ADTOOL_AMPI_SHADOWCOMM_LIST ;
+  newCell->comm = comm;
+  newCell->shadowComm = dupComm;
+  ADTOOL_AMPI_SHADOWCOMM_LIST = newCell;
+}
+
+/**
+ * Get the shadow communicator used to separate the communication graph of
+ * (tangent-)diff variables from the communication graph of original variables
+ */
 MPI_Comm ADTOOL_AMPI_getShadowComm(MPI_Comm comm) {
-  /* ----> Of course this must change if comm!=MPI_COMM_WORLD !! */
-  return ADTOOL_AMPI_COMM_WORLD_SHADOW ;
+  struct AMPI_ShadowComm_list * inShadowCommList = ADTOOL_AMPI_SHADOWCOMM_LIST ;
+  while (inShadowCommList!=NULL && inShadowCommList->comm!=comm) {
+    inShadowCommList = inShadowCommList->next_p ;
+  }
+  if (inShadowCommList) {
+    return inShadowCommList->shadowComm ;
+  } else {
+    /* Nothing found about "comm": this is wrong!! fallback return comm */
+    return comm ;
+  }
+}
+
+/**
+ * Removes the info about the shadow communicator associated to "comm".
+ */
+void ADTOOL_AMPI_delShadowComm(MPI_Comm comm) {
+  struct AMPI_ShadowComm_list ** toinShadowCommList = &ADTOOL_AMPI_SHADOWCOMM_LIST ;
+  while (*toinShadowCommList!=NULL && (*toinShadowCommList)->comm!=comm) {
+    toinShadowCommList = &((*toinShadowCommList)->next_p) ;
+  }
+  if (*toinShadowCommList!=NULL) {
+    struct AMPI_ShadowComm_list *cell = *toinShadowCommList ;
+    toinShadowCommList = &(cell->next_p) ;
+    free(cell);
+  }
 }
 
 /** Returns the non-diff part of a communication buffer
@@ -388,7 +450,7 @@ void* ADTOOL_AMPI_allocateTempActiveBuf(int count,
 /*     ptr = malloc(count*sizeof(MPI_DOUBLE)); */
 /*   else if (datatype==MPI_FLOAT) */
 /*     ptr = malloc(count*sizeof(MPI_FLOAT)); */
-  MPI_Aint lb,extent ;
+  MPI_Aint lb, extent ;
   int rc = MPI_Type_get_extent(datatype, &lb, &extent) ;
   assert(rc==MPI_SUCCESS);
   void* ptr = NULL ;
@@ -507,7 +569,9 @@ void ADTOOL_AMPI_tangentMax(int count, MPI_Datatype datatype, MPI_Comm comm,
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
-/** This is the adjoint of assignment target=source*target */
+/**
+ * This is the adjoint of assignment target=source*target
+ */
 void ADTOOL_AMPI_adjointMultiply(int count, MPI_Datatype datatype, MPI_Comm comm,
                                  void *source, void *adjointSource,
                                  void* target, void* adjointTarget) {
@@ -534,7 +598,9 @@ void ADTOOL_AMPI_adjointMultiply(int count, MPI_Datatype datatype, MPI_Comm comm
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
-/** This is the adjoint of assignment target=MIN(source,target) */
+/**
+ * This is the adjoint of assignment target=MIN(source,target)
+ */
 void ADTOOL_AMPI_adjointMin(int count, MPI_Datatype datatype, MPI_Comm comm,
                                  void *source, void *adjointSource,
                                  void* target, void* adjointTarget) {
@@ -565,7 +631,9 @@ void ADTOOL_AMPI_adjointMin(int count, MPI_Datatype datatype, MPI_Comm comm,
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
-/** This is the adjoint of assignment target=MAX(source,target) */
+/**
+ * This is the adjoint of assignment target=MAX(source,target)
+ */
 void ADTOOL_AMPI_adjointMax(int count, MPI_Datatype datatype, MPI_Comm comm,
                                  void *source, void *adjointSource,
                                  void* target, void* adjointTarget) {
@@ -596,6 +664,9 @@ void ADTOOL_AMPI_adjointMax(int count, MPI_Datatype datatype, MPI_Comm comm,
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
+/**
+ * Multiply the given buffer target, which holds an adjoint, with the given source value
+ */
 void ADTOOL_AMPI_multiplyAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Comm comm, void* target, void *source, void *idx) { 
   if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
     double *vb = (double *)target ;
@@ -619,6 +690,9 @@ void ADTOOL_AMPI_multiplyAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Co
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
+/**
+ * Divide the given buffer target, which holds an adjoint, with the given source value
+ */
 void ADTOOL_AMPI_divideAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Comm comm, void* target, void *source, void *idx) { 
   if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
     double *vb = (double *)target ;
@@ -642,6 +716,10 @@ void ADTOOL_AMPI_divideAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Comm
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
+/**
+ * Check equality of the given buffers source1 and source2, which hold adjoints,
+ * and return the result in the given target buffer.
+ */
 void ADTOOL_AMPI_equalAdjoints(int adjointCount, MPI_Datatype datatype, MPI_Comm comm, void* target, void *source1, void *source2, void *idx) { 
   if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
     double *vb = (double *)target ;
@@ -674,7 +752,25 @@ void ADTOOL_AMPI_equalAdjoints(int adjointCount, MPI_Datatype datatype, MPI_Comm
  * with the given additional adjoint value found in "source".
  */
 void ADTOOL_AMPI_incrementAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Comm comm, void* target, void *source, void *idx) { 
-  if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
+  int dt_idx = derivedTypeIdx(datatype);
+  if (isUserDefinedOp(dt_idx)) {
+    derivedTypeData* dat = getDTypeData();
+    MPI_Aint lb, extent ;
+    MPI_Type_get_extent(datatype,&lb,&extent);
+    MPI_Aint*   fieldOffsets = dat->arrays_of_displacements[dt_idx] ;
+    int*   fieldBlocklengths = dat->arrays_of_blocklengths[dt_idx] ;
+    MPI_Datatype* fieldTypes = dat->arrays_of_types[dt_idx] ;
+    int nbfields = dat->counts[dt_idx] ;
+    int i,j ;
+    for (i=0 ; i<adjointCount ; ++i) {
+      for (j=0 ; j<nbfields ; ++j) {
+        ADTOOL_AMPI_incrementAdjoint(fieldBlocklengths[j], fieldTypes[j], comm,
+                                     target+fieldOffsets[j], source+fieldOffsets[j], idx) ;
+      }
+      target += extent ;
+      source += extent ;
+    }
+  } else if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
     double *vb = (double *)target ;
     double *nb = (double *)source ;
     int i ;
@@ -699,8 +795,26 @@ void ADTOOL_AMPI_incrementAdjoint(int adjointCount, MPI_Datatype datatype, MPI_C
 /**
  * Reset to zero the given buffer "target", which holds an adjoint variable.
  */
-void ADTOOL_AMPI_nullifyAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Comm comm, void* target) {
-  if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
+void ADTOOL_AMPI_nullifyAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Comm comm,
+                                void* target) {
+  int dt_idx = derivedTypeIdx(datatype);
+  if (isUserDefinedOp(dt_idx)) {
+    derivedTypeData* dat = getDTypeData();
+    MPI_Aint lb, extent ;
+    MPI_Type_get_extent(datatype,&lb,&extent);
+    MPI_Aint*   fieldOffsets = dat->arrays_of_displacements[dt_idx] ;
+    int*   fieldBlocklengths = dat->arrays_of_blocklengths[dt_idx] ;
+    MPI_Datatype* fieldTypes = dat->arrays_of_types[dt_idx] ;
+    int nbfields = dat->counts[dt_idx] ;
+    int i,j ;
+    for (i=0 ; i<adjointCount ; ++i) {
+      for (j=0 ; j<nbfields ; ++j) {
+        ADTOOL_AMPI_nullifyAdjoint(fieldBlocklengths[j], fieldTypes[j], comm,
+                                   target+fieldOffsets[j]) ;
+      }
+      target += extent ;
+    }
+  } else if (datatype==MPI_DOUBLE || datatype==MPI_DOUBLE_PRECISION) {
     double *vb = (double *)target ;
     int i ;
     for (i=0 ; i<adjointCount ; ++i) {
@@ -718,12 +832,18 @@ void ADTOOL_AMPI_nullifyAdjoint(int adjointCount, MPI_Datatype datatype, MPI_Com
     MPI_Abort(comm, MPI_ERR_TYPE);
 }
 
+extern void pushNarray(void *x, unsigned int nbChars) ;
+extern void popNarray(void *x, unsigned int nbChars) ;
+
 /**
  * Push the contents of buffer somewhere
  */
 void ADTOOL_AMPI_pushBuffer(int count, MPI_Datatype datatype, MPI_Comm comm,
                             void* buffer) {
-  printf("Please provide implementation of ADTOOL_AMPI_pushBuffer()\n") ;
+    MPI_Aint lb, extent ;
+    MPI_Type_get_extent(datatype,&lb,&extent);
+    int length = count*(int)extent ;
+    pushNarray((char*)buffer, length) ;
 }
 
 /**
@@ -731,7 +851,10 @@ void ADTOOL_AMPI_pushBuffer(int count, MPI_Datatype datatype, MPI_Comm comm,
  */
 void ADTOOL_AMPI_popBuffer(int count, MPI_Datatype datatype, MPI_Comm comm,
                            void* buffer) {
-  printf("Please provide implementation of ADTOOL_AMPI_popBuffer()\n") ;
+    MPI_Aint lb, extent ;
+    MPI_Type_get_extent(datatype,&lb,&extent);
+    int length = count*(int)extent ;
+    popNarray((char*)buffer, length) ;
 }
 
 void ADTOOL_AMPI_writeData(void *buf,int *count) {}

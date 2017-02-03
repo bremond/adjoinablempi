@@ -683,10 +683,7 @@ typedef AMPI_Activity (ADTOOL_AMPI_isActiveTypeF) (MPI_Datatype);
 
 /** The global MPI_COMM_WORLD_D */
 extern MPI_Comm ADTOOL_AMPI_COMM_WORLD_SHADOW;
-/** The function getting the shadow communicator used to separate from the
- * communication graph of original variables */
-MPI_Comm ADTOOL_AMPI_getShadowComm(MPI_Comm comm) ;
-typedef MPI_Comm (ADTOOL_AMPI_getShadowCommF) (MPI_Comm) ;
+
 /**
  * Maps the active buffer on a mapped buffer for a MPI_Win
  */
@@ -730,6 +727,19 @@ void ADTOOL_AMPI_pushBuffer(int count, MPI_Datatype datatype, MPI_Comm comm, voi
 typedef void (ADTOOL_AMPI_pushBufferF) (int, MPI_Datatype, MPI_Comm, void*) ;
 void ADTOOL_AMPI_popBuffer(int count, MPI_Datatype datatype, MPI_Comm comm, void* buffer) ;
 typedef void (ADTOOL_AMPI_popBufferF) (int, MPI_Datatype, MPI_Comm, void*) ;
+
+/** Memo mechanism for the shadow communicators used in tangent ST-AD association-by-name (e.g. Tapenade) */
+void ADTOOL_AMPI_addShadowComm(MPI_Comm comm, MPI_Comm dupComm) ;
+typedef void (ADTOOL_AMPI_addShadowCommF) (MPI_Comm, MPI_Comm) ;
+MPI_Comm ADTOOL_AMPI_getShadowComm(MPI_Comm comm) ;
+typedef MPI_Comm (ADTOOL_AMPI_getShadowCommF) (MPI_Comm) ;
+void ADTOOL_AMPI_delShadowComm(MPI_Comm comm);
+typedef void (ADTOOL_AMPI_delShadowCommF) (MPI_Comm) ;
+
+/** The function getting the shadow communicator used to separate from the
+ * communication graph of original variables */
+MPI_Comm ADTOOL_AMPI_getShadowComm(MPI_Comm comm) ;
+typedef MPI_Comm (ADTOOL_AMPI_getShadowCommF) (MPI_Comm) ;
 
 struct ADTOOL_AMPI_FPCollection{
   ADTOOL_AMPI_pushBcastInfoF *pushBcastInfo_fp;
@@ -798,17 +808,19 @@ struct ADTOOL_AMPI_FPCollection{
   ADTOOL_AMPI_writeWinDataF *writeWinData_fp;
   ADTOOL_AMPI_getWinSizeF *getWinSize_fp;
   ADTOOL_AMPI_syncAdjointWinF *syncAdjointWin_fp;
-#ifdef AMPI_FORTRANCOMPATIBLE
-  adtool_ampi_fortransetuptypes_F *fortransetuptypes__fp;
-  adtool_ampi_fortrancleanuptypes_F *fortrancleanuptypes__fp;
-#endif
   ADTOOL_AMPI_isActiveTypeF *isActiveType_fp ;
-  ADTOOL_AMPI_getShadowCommF *getShadowComm_fp ;
   ADTOOL_AMPI_tangentMultiplyF *tangentMultiply_fp ;
   ADTOOL_AMPI_tangentMinF *tangentMin_fp ;
   ADTOOL_AMPI_tangentMaxF *tangentMax_fp ;
   ADTOOL_AMPI_pushBufferF *pushBuffer_fp ;
   ADTOOL_AMPI_popBufferF *popBuffer_fp ;
+  ADTOOL_AMPI_addShadowCommF *addShadowComm_fp ;
+  ADTOOL_AMPI_getShadowCommF *getShadowComm_fp ;
+  ADTOOL_AMPI_delShadowCommF *delShadowComm_fp ;
+#ifdef AMPI_FORTRANCOMPATIBLE
+  adtool_ampi_fortransetuptypes_F *fortransetuptypes__fp;
+  adtool_ampi_fortrancleanuptypes_F *fortrancleanuptypes__fp;
+#endif
 };
 
 /**

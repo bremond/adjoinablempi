@@ -68,6 +68,33 @@ int AMPI_Type_free_NT(MPI_Datatype *datatype);
 
 int AMPI_Op_free_NT(MPI_Op *op);
 
+int AMPI_Comm_dup_NT(MPI_Comm comm, MPI_Comm *dupComm) ;
+
+/**
+ * this wrapper variant of \ref AMPI_Comm_dup manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade); to be used outside of the transformed/traced code section
+ */
+int TLS_AMPI_Comm_dup_NT(MPI_Comm comm, MPI_Comm *dupComm) ;
+
+int AMPI_Comm_split_NT(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) ;
+
+/**
+ * this wrapper variant of \ref AMPI_Comm_split manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade); to be used outside of the transformed/traced code section
+ */
+int TLS_AMPI_Comm_split_NT(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) ;
+
+int AMPI_Comm_create_NT(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) ;
+
+/**
+ * this wrapper variant of \ref AMPI_Comm_create manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade); to be used outside of the transformed/traced code section
+ */
+int TLS_AMPI_Comm_create_NT(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) ;
+
+int AMPI_Comm_free_NT(MPI_Comm *comm) ;
+
+/**
+ * this wrapper variant of \ref AMPI_Comm_free manages the shadow communicators if code is differentiated in tangent mode with ST-AD with shadow variables (e.g. Tapenade); to be used outside of the transformed/traced code section
+ */
+int TLS_AMPI_Comm_free_NT(MPI_Comm *comm) ;
 
 #ifdef AMPI_FORTRANCOMPATIBLE
 /** Must be defined in the fortranSupport.F of the particular AD tool */

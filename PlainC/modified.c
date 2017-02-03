@@ -387,3 +387,19 @@ int AMPI_Allgatherv(void *sendbuf,
                         recvtype,
                         comm);
 }
+
+int AMPI_Comm_dup(MPI_Comm comm, MPI_Comm *dupComm) {
+  return MPI_Comm_dup(comm, dupComm) ;
+}
+
+int AMPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) {
+  return MPI_Comm_split(comm, color, key, dupComm) ;
+}
+
+int AMPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) {
+  return MPI_Comm_create(comm, group, dupComm) ;
+}
+
+int AMPI_Comm_free(MPI_Comm *comm) {
+  return MPI_Comm_free(comm) ;
+}

@@ -100,6 +100,11 @@ struct AMPI_Request_S {
   MPI_Request plainRequest;
 
   /**
+   * the "plain" request returned in the bw sweep by the MPI_Send/Recv in the BW_AMPI_Wait
+   */
+  MPI_Request bwRequest;
+
+  /**
    * the "plain" request returned by MPI_Isend or MPI_Irecv resp; 
    */  
   MPI_Request tracedRequest;

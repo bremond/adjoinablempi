@@ -82,13 +82,16 @@ int AMPI_Init_NT(int* argc,
   ourADTOOL_AMPI_FPCollection.writeWinData_fp=&ADTOOL_AMPI_writeWinData;
   ourADTOOL_AMPI_FPCollection.getWinSize_fp=&ADTOOL_AMPI_getWinSize;
   ourADTOOL_AMPI_FPCollection.syncAdjointWin_fp=&ADTOOL_AMPI_syncAdjointWin;
+  ourADTOOL_AMPI_FPCollection.isActiveType_fp=&ADTOOL_AMPI_isActiveType;
+  ourADTOOL_AMPI_FPCollection.pushBuffer_fp=&ADTOOL_AMPI_pushBuffer ;
+  ourADTOOL_AMPI_FPCollection.popBuffer_fp=&ADTOOL_AMPI_popBuffer ;
+  ourADTOOL_AMPI_FPCollection.addShadowComm_fp=&ADTOOL_AMPI_addShadowComm ;
+  ourADTOOL_AMPI_FPCollection.getShadowComm_fp=&ADTOOL_AMPI_getShadowComm ;
+  ourADTOOL_AMPI_FPCollection.delShadowComm_fp=&ADTOOL_AMPI_delShadowComm ;
 #ifdef AMPI_FORTRANCOMPATIBLE
   ourADTOOL_AMPI_FPCollection.fortransetuptypes__fp=&adtool_ampi_fortransetuptypes_;
   ourADTOOL_AMPI_FPCollection.fortrancleanuptypes__fp=&adtool_ampi_fortrancleanuptypes_;
 #endif
-  ourADTOOL_AMPI_FPCollection.isActiveType_fp=&ADTOOL_AMPI_isActiveType;
-  ourADTOOL_AMPI_FPCollection.pushBuffer_fp=&ADTOOL_AMPI_pushBuffer ;
-  ourADTOOL_AMPI_FPCollection.popBuffer_fp=&ADTOOL_AMPI_popBuffer ;
   return rc;
 }
 
@@ -265,6 +268,16 @@ MPI_Comm ADTOOL_AMPI_pop_comm() {
   return 0;
 }
 
+void ADTOOL_AMPI_addShadowComm(MPI_Comm comm, MPI_Comm dupComm) {
+}
+
+MPI_Comm ADTOOL_AMPI_getShadowComm(MPI_Comm comm) {
+  return 0;
+}
+
+void ADTOOL_AMPI_delShadowComm(MPI_Comm comm) {
+}
+
 void* ADTOOL_AMPI_rawData(void* activeData, int *size) { 
   return activeData;
 }
@@ -364,6 +377,8 @@ void * ADTOOL_AMPI_copyActiveBuf(void* source,
                                  MPI_Comm comm) {
   return source;
 }
+
+
 
 /** This is the adjoint of assignment target=source*target */
 void ADTOOL_AMPI_adjointMultiply(int count, MPI_Datatype datatype, MPI_Comm comm,

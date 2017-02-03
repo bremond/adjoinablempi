@@ -568,3 +568,111 @@ void tls_ampi_allreduce_(void* sbuf, void* shadowsbuf,
                               op, uopd,
                               commC) ;
 }
+
+void ampi_comm_dup_(MPI_Fint *commF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = MPI_Comm_dup(commC, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void ampi_comm_dup_nt_(MPI_Fint *commF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = MPI_Comm_dup(commC, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void ampi_comm_split_(MPI_Fint *commF, int *color, int *key, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = MPI_Comm_split(commC, *color, *key, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void ampi_comm_split_nt_(MPI_Fint *commF, int *color, int *key, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = MPI_Comm_split(commC, *color, *key, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void ampi_comm_create_(MPI_Fint *commF, MPI_Fint *groupF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  MPI_Group group = MPI_Group_f2c(*groupF) ;
+  *err_code = MPI_Comm_create(commC, group, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void ampi_comm_create_nt_(MPI_Fint *commF, MPI_Fint *groupF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  MPI_Group group = MPI_Group_f2c(*groupF) ;
+  *err_code = MPI_Comm_create(commC, group, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void ampi_comm_free_(MPI_Fint *commF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = MPI_Comm_free(&commC) ;
+}
+
+void ampi_comm_free_nt_(MPI_Fint *commF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = MPI_Comm_free(&commC) ;
+}
+
+void tls_ampi_comm_dup_(MPI_Fint *commF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = TLS_AMPI_Comm_dup(commC, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void tls_ampi_comm_dup_nt_(MPI_Fint *commF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = TLS_AMPI_Comm_dup_NT(commC, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void tls_ampi_comm_split_(MPI_Fint *commF, int *color, int *key, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = TLS_AMPI_Comm_split(commC, *color, *key, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void tls_ampi_comm_split_nt_(MPI_Fint *commF, int *color, int *key, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  *err_code = TLS_AMPI_Comm_split_NT(commC, *color, *key, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void tls_ampi_comm_create_(MPI_Fint *commF, MPI_Fint *groupF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  MPI_Group group = MPI_Group_f2c(*groupF) ;
+  *err_code = TLS_AMPI_Comm_create(commC, group, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void tls_ampi_comm_create_nt_(MPI_Fint *commF, MPI_Fint *groupF, MPI_Fint *dupCommF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  MPI_Comm dupCommC ;
+  MPI_Group group = MPI_Group_f2c(*groupF) ;
+  *err_code = TLS_AMPI_Comm_create_NT(commC, group, &dupCommC) ;
+  *dupCommF = MPI_Comm_c2f(dupCommC) ;
+}
+
+void tls_ampi_comm_free_(MPI_Fint *commF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Comm_free(&commC) ;
+}
+
+void tls_ampi_comm_free_nt_(MPI_Fint *commF, int* err_code) {
+  MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
+  *err_code = TLS_AMPI_Comm_free_NT(&commC) ;
+}

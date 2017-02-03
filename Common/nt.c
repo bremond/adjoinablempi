@@ -212,3 +212,20 @@ int AMPI_Type_free_NT(MPI_Datatype *datatype) {
 int AMPI_Op_free_NT(MPI_Op *op) {
   return MPI_Op_free(op);
 }
+
+int TLS_AMPI_Comm_dup_NT(MPI_Comm comm, MPI_Comm *dupComm) {
+  return TLS_AMPI_Comm_dup(comm, dupComm) ;
+}
+
+int TLS_AMPI_Comm_split_NT(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) {
+  return TLS_AMPI_Comm_split(comm, color, key, dupComm) ;
+}
+
+int TLS_AMPI_Comm_create_NT(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) {
+  return TLS_AMPI_Comm_create(comm, group, dupComm) ;
+}
+
+int TLS_AMPI_Comm_free_NT(MPI_Comm *comm) {
+  return TLS_AMPI_Comm_free(comm) ;
+}
+

@@ -60,3 +60,19 @@ int AMPI_Type_create_struct_NT(int count,
 			       newtype);
   return rc;
 }
+
+int AMPI_Comm_dup_NT(MPI_Comm comm, MPI_Comm *dupComm) {
+  return MPI_Comm_dup(comm, dupComm) ;
+}
+
+int AMPI_Comm_split_NT(MPI_Comm comm, int color, int key, MPI_Comm *dupComm) {
+  return MPI_Comm_split(comm, color, key, dupComm) ;
+}
+
+int AMPI_Comm_create_NT(MPI_Comm comm, MPI_Group group, MPI_Comm *dupComm) {
+  return MPI_Comm_create(comm, group, dupComm) ;
+}
+
+int AMPI_Comm_free_NT(MPI_Comm *comm) {
+  return MPI_Comm_free(comm) ;
+}
