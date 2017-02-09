@@ -736,11 +736,6 @@ typedef MPI_Comm (ADTOOL_AMPI_getShadowCommF) (MPI_Comm) ;
 void ADTOOL_AMPI_delShadowComm(MPI_Comm comm);
 typedef void (ADTOOL_AMPI_delShadowCommF) (MPI_Comm) ;
 
-/** The function getting the shadow communicator used to separate from the
- * communication graph of original variables */
-MPI_Comm ADTOOL_AMPI_getShadowComm(MPI_Comm comm) ;
-typedef MPI_Comm (ADTOOL_AMPI_getShadowCommF) (MPI_Comm) ;
-
 struct ADTOOL_AMPI_FPCollection{
   ADTOOL_AMPI_pushBcastInfoF *pushBcastInfo_fp;
   ADTOOL_AMPI_popBcastInfoF *popBcastInfo_fp;

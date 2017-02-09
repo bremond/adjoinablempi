@@ -139,6 +139,11 @@ void ampi_wait_( MPI_Fint *requestF, MPI_Fint *statusF, int* err_code) {
   }
 }
 
+void ampi_barrier_( MPI_Fint *commF, int *err_code ) {
+  MPI_Comm commC = MPI_Comm_f2c(*commF) ;
+  *err_code = AMPI_Barrier( commC ) ;
+}
+
 void ampi_bcast_(void *buf, int *count, MPI_Fint *datatypeF, int *root, int *commF, int *err_code) {
   MPI_Datatype datatype = MPI_Type_f2c(*datatypeF) ;
   MPI_Comm commC = MPI_Comm_f2c( *commF ) ;
